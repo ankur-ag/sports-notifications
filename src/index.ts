@@ -69,7 +69,7 @@ export const scheduledFetchDailySchedule = onSchedule(
     schedule: '0 6 * * *', // Cron: Every day at 6 AM UTC
     timeZone: 'UTC',
     memory: '256MiB',
-    timeoutSeconds: 540, // 9 minutes max (allows for slow NBA CDN)
+    timeoutSeconds: 120, // 2 minutes max
   },
   async (event) => {
     console.log('[CloudFunction] scheduledFetchDailySchedule triggered');
@@ -97,7 +97,7 @@ export const scheduledPollLiveGames = onSchedule(
     schedule: '*/5 * * * *', // Cron: Every 5 minutes
     timeZone: 'UTC',
     memory: '512MiB',
-    timeoutSeconds: 300, // 5 minutes max
+    timeoutSeconds: 120, // 2 minutes max
   },
   async (event) => {
     console.log('[CloudFunction] scheduledPollLiveGames triggered');
@@ -153,7 +153,7 @@ export const scheduledPollScheduledGames = onSchedule(
 export const manualFetchSchedule = onRequest(
   {
     memory: '256MiB',
-    timeoutSeconds: 300, // 5 minutes to allow for slow NBA CDN access from Cloud Functions
+    timeoutSeconds: 60, // 1 minute
   },
   async (request, response) => {
     console.log('[CloudFunction] manualFetchSchedule triggered');

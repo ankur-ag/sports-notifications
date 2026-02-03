@@ -134,26 +134,25 @@ export class NBAProvider extends BaseSportProvider {
     const dateStr = date.toISOString().split('T')[0];
     console.log(`[NBAProvider] Fetching schedule for ${dateStr}`);
     
-    // Retry logic for network resilience
-    // Note: Using very long timeout (60s) due to Cloud Functions slow egress to NBA CDN
-    const maxRetries = 2;
+    // Simple retry logic for network resilience
+    const maxRetries = 1; // 2 total attempts
     let lastError: Error | null = null;
     
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
       try {
-        console.log(`[NBAProvider] Attempt ${attempt}/${maxRetries} to fetch NBA scoreboard`);
-        
         // Use native fetch with AbortController for timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (Cloud Functions has slow egress to NBA CDN)
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
         try {
           // NBA CDN endpoint
           const response = await fetch(this.SCOREBOARD_URL, {
             signal: controller.signal,
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; SportsNotificationBot/1.0)',
-              'Accept': 'application/json'
+              'User-Agent': 'Mozilla/5.0',
+              'Accept': 'application/json',
+              'Referer': 'https://www.nba.com',
+              'Accept-Language': 'en-US,en;q=0.9'
             }
           });
           
@@ -183,21 +182,18 @@ export class NBAProvider extends BaseSportProvider {
         }
       } catch (error: any) {
         lastError = error;
-        console.error(`[NBAProvider] Attempt ${attempt} failed:`, error.message);
+        console.error(`[NBAProvider] Fetch attempt ${attempt} failed:`, error.message);
         
-        // Don't retry on final attempt
-        if (attempt < maxRetries) {
-          const delayMs = 2000 * attempt; // Exponential backoff: 2s, 4s, 6s
-          console.log(`[NBAProvider] Retrying in ${delayMs}ms...`);
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        // Retry once after 2 seconds
+        if (attempt === 1) {
+          console.log(`[NBAProvider] Retrying in 2s...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
     }
     
-    // All retries failed
-    console.error(`[NBAProvider] All ${maxRetries} attempts failed. Last error:`, lastError?.message);
-    
-    // Return empty array on error to prevent cascade failures
+    // Both attempts failed
+    console.error(`[NBAProvider] Failed to fetch schedule:`, lastError?.message);
     return [];
   }
   
@@ -215,14 +211,16 @@ export class NBAProvider extends BaseSportProvider {
       const boxscoreUrl = `${this.BOXSCORE_BASE_URL}${gameId}.json`;
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
       try {
         const response = await fetch(boxscoreUrl, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SportsNotificationBot/1.0)',
-            'Accept': 'application/json'
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+            'Referer': 'https://www.nba.com',
+            'Accept-Language': 'en-US,en;q=0.9'
           }
         });
         
@@ -320,7 +318,7 @@ export class NBAProvider extends BaseSportProvider {
       // Parse period scores if available
       periods: this.parsePeriods(apiGame),
       
-      venue: undefined, // Available in boxscore endpoint
+      // Note: venue is only available in boxscore endpoint
       city: apiGame.homeTeam.teamCity,
       
       importance: isPlayoff ? 9 : 5, // Playoff games are more important
