@@ -18,8 +18,8 @@
  * 3. Log summary
  */
 
-import { gameRepository } from '../services/firestore';
-import { ProviderRegistry } from '../providers/SportProvider';
+import {gameRepository} from '../services/firestore';
+import {ProviderRegistry} from '../providers/SportProvider';
 
 /**
  * Fetch today's schedule for all sports
@@ -56,7 +56,6 @@ export async function fetchDailySchedule(): Promise<void> {
           await gameRepository.saveGames(games);
           totalGames += games.length;
         }
-        
       } catch (error) {
         console.error(`[FetchDailySchedule] Error fetching ${provider.sport} schedule:`, error);
         // Continue processing other sports
@@ -64,7 +63,6 @@ export async function fetchDailySchedule(): Promise<void> {
     }
     
     console.log(`[FetchDailySchedule] Successfully fetched ${totalGames} games total`);
-    
   } catch (error) {
     console.error('[FetchDailySchedule] Fatal error:', error);
     throw error;
@@ -91,14 +89,12 @@ export async function fetchScheduleForDate(date: Date): Promise<void> {
           await gameRepository.saveGames(games);
           totalGames += games.length;
         }
-        
       } catch (error) {
         console.error(`[FetchDailySchedule] Error fetching ${provider.sport} for ${date}:`, error);
       }
     }
     
     console.log(`[FetchDailySchedule] Fetched ${totalGames} games for ${date.toISOString()}`);
-    
   } catch (error) {
     console.error('[FetchDailySchedule] Error:', error);
     throw error;
@@ -126,7 +122,6 @@ export async function fetchScheduleForDateRange(
       
       // Add delay to respect API rate limits
       await sleep(1000); // 1 second between requests
-      
     } catch (error) {
       console.error(`[FetchDailySchedule] Error fetching ${currentDate.toISOString()}:`, error);
     }
@@ -142,7 +137,7 @@ export async function fetchScheduleForDateRange(
  * Utility: Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

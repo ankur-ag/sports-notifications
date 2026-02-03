@@ -20,15 +20,15 @@
  * Note: These are unofficial but publicly accessible endpoints used by NBA.com
  */
 
-import axios, { AxiosInstance } from 'axios';
+import axios, {AxiosInstance} from 'axios';
 import {
   Game,
   GameStatus,
   Sport,
   GamePeriod
 } from '../models/Game';
-import { Event, EventType, EventPriority, generateEventId } from '../models/Event';
-import { BaseSportProvider } from './SportProvider';
+import {Event, EventType, EventPriority, generateEventId} from '../models/Event';
+import {BaseSportProvider} from './SportProvider';
 
 /**
  * NBA API Response Types
@@ -247,9 +247,9 @@ export class NBAProvider extends BaseSportProvider {
         name: `${apiGame.homeTeam.teamCity} ${apiGame.homeTeam.teamName}`,
         abbreviation: apiGame.homeTeam.teamTricode,
         score: apiGame.homeTeam.score,
-        record: apiGame.homeTeam.wins && apiGame.homeTeam.losses 
-          ? `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}` 
-          : undefined,
+        record: apiGame.homeTeam.wins && apiGame.homeTeam.losses ? 
+          `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}` : 
+          undefined,
         isHome: true
       },
       
@@ -258,9 +258,9 @@ export class NBAProvider extends BaseSportProvider {
         name: `${apiGame.awayTeam.teamCity} ${apiGame.awayTeam.teamName}`,
         abbreviation: apiGame.awayTeam.teamTricode,
         score: apiGame.awayTeam.score,
-        record: apiGame.awayTeam.wins && apiGame.awayTeam.losses 
-          ? `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}` 
-          : undefined,
+        record: apiGame.awayTeam.wins && apiGame.awayTeam.losses ? 
+          `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}` : 
+          undefined,
         isHome: false
       },
       

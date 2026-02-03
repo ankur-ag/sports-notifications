@@ -14,19 +14,19 @@
  * 6. testNotification - HTTP trigger
  */
 
-import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { onRequest } from 'firebase-functions/v2/https';
+import {onSchedule} from 'firebase-functions/v2/scheduler';
+import {onRequest} from 'firebase-functions/v2/https';
 
 // Import providers
-import { createNBAProvider } from './providers/NBAProvider';
-import { ProviderRegistry } from './providers/SportProvider';
+import {createNBAProvider} from './providers/NBAProvider';
+import {ProviderRegistry} from './providers/SportProvider';
 
 // Import jobs
-import { fetchDailySchedule, fetchScheduleForDate, validateProviders } from './jobs/fetchDailySchedule';
-import { pollLiveGames, pollScheduledGames, pollGameById, getPollingStats } from './jobs/pollLiveGames';
+import {fetchDailySchedule, fetchScheduleForDate, validateProviders} from './jobs/fetchDailySchedule';
+import {pollLiveGames, pollScheduledGames, pollGameById, getPollingStats} from './jobs/pollLiveGames';
 
 // Import services
-import { fcmService } from './services/fcm';
+import {fcmService} from './services/fcm';
 
 /**
  * Initialize providers on cold start
@@ -175,7 +175,6 @@ export const manualFetchSchedule = onRequest(
           message: 'Fetched today\'s schedule' 
         });
       }
-      
     } catch (error: any) {
       console.error('[CloudFunction] manualFetchSchedule failed:', error);
       response.status(500).json({ 
@@ -221,7 +220,6 @@ export const manualPollGame = onRequest(
         success: true, 
         message: `Polled game ${gameId}` 
       });
-      
     } catch (error: any) {
       console.error('[CloudFunction] manualPollGame failed:', error);
       response.status(500).json({ 
@@ -261,7 +259,7 @@ export const testNotification = onRequest(
         return;
       }
       
-      const { fcmToken } = request.body;
+      const {fcmToken} = request.body;
       
       if (!fcmToken) {
         response.status(400).json({ 
@@ -284,7 +282,6 @@ export const testNotification = onRequest(
           error: 'Failed to send test notification' 
         });
       }
-      
     } catch (error: any) {
       console.error('[CloudFunction] testNotification failed:', error);
       response.status(500).json({ 
@@ -321,7 +318,6 @@ export const getStats = onRequest(
           timestamp: new Date().toISOString()
         }
       });
-      
     } catch (error: any) {
       console.error('[CloudFunction] getStats failed:', error);
       response.status(500).json({ 

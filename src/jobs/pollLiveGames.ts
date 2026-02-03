@@ -22,10 +22,10 @@
  * 3. Log summary
  */
 
-import { gameRepository } from '../services/firestore';
-import { notificationEngine } from '../engine/notificationEngine';
-import { ProviderRegistry } from '../providers/SportProvider';
-import { Game, GameStatus } from '../models/Game';
+import {gameRepository} from '../services/firestore';
+import {notificationEngine} from '../engine/notificationEngine';
+import {ProviderRegistry} from '../providers/SportProvider';
+import {Game, GameStatus} from '../models/Game';
 
 /**
  * Poll all live games and send notifications for detected events
@@ -57,7 +57,6 @@ export async function pollLiveGames(): Promise<void> {
         
         // Add small delay between API calls to respect rate limits
         await sleep(500); // 500ms between games
-        
       } catch (error) {
         console.error(`[PollLiveGames] Error polling game ${storedGame.id}:`, error);
         errors++;
@@ -66,7 +65,6 @@ export async function pollLiveGames(): Promise<void> {
     }
     
     console.log(`[PollLiveGames] Poll complete: ${gamesProcessed}/${liveGames.length} games processed, ${totalNotifications} notifications sent, ${errors} errors`);
-    
   } catch (error) {
     console.error('[PollLiveGames] Fatal error:', error);
     throw error;
@@ -102,7 +100,6 @@ async function pollSingleGame(storedGame: Game): Promise<number> {
     await gameRepository.saveGame(updatedGame);
     
     return notificationsSent;
-    
   } catch (error) {
     console.error(`[PollLiveGames] Error in pollSingleGame:`, error);
     throw error;
@@ -125,7 +122,7 @@ export async function pollScheduledGames(): Promise<void> {
     const todaysGames = await gameRepository.getGamesByDate(today);
     
     // Filter for games that are scheduled and might start soon
-    const scheduledGames = todaysGames.filter(game => 
+    const scheduledGames = todaysGames.filter((game) => 
       game.status === GameStatus.SCHEDULED &&
       isGameStartingSoon(game)
     );
@@ -146,7 +143,6 @@ export async function pollScheduledGames(): Promise<void> {
         console.error(`[PollLiveGames] Error polling scheduled game ${game.id}:`, error);
       }
     }
-    
   } catch (error) {
     console.error('[PollLiveGames] Error polling scheduled games:', error);
     throw error;
@@ -183,7 +179,6 @@ export async function pollGameById(gameId: string): Promise<void> {
     const notificationsSent = await pollSingleGame(storedGame);
     
     console.log(`[PollLiveGames] Manual poll complete: ${notificationsSent} notifications sent`);
-    
   } catch (error) {
     console.error(`[PollLiveGames] Error in manual poll:`, error);
     throw error;
@@ -194,7 +189,7 @@ export async function pollGameById(gameId: string): Promise<void> {
  * Utility: Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -211,9 +206,8 @@ export async function getPollingStats(): Promise<{
     
     return {
       liveGamesCount: liveGames.length,
-      scheduledTodayCount: todaysGames.filter(g => g.status === GameStatus.SCHEDULED).length
+      scheduledTodayCount: todaysGames.filter((g) => g.status === GameStatus.SCHEDULED).length
     };
-    
   } catch (error) {
     console.error('[PollLiveGames] Error getting stats:', error);
     return {

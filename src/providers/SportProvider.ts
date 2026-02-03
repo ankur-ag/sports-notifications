@@ -13,8 +13,8 @@
  * - Providers should be stateless (no internal caching)
  */
 
-import { Game, Sport } from '../models/Game';
-import { Event } from '../models/Event';
+import {Game, Sport} from '../models/Game';
+import {Event} from '../models/Event';
 
 export interface SportProvider {
   /**
@@ -85,7 +85,7 @@ export abstract class BaseSportProvider implements SportProvider {
    */
   detectEvents(oldGame: Game | null, newGame: Game): Event[] {
     // Import here to avoid circular dependency
-    const { detectCommonEvents } = require('../engine/eventDetector');
+    const {detectCommonEvents} = require('../engine/eventDetector');
     
     return detectCommonEvents(oldGame, newGame);
   }

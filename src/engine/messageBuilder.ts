@@ -12,9 +12,9 @@
  * enhancements like personalization and A/B testing.
  */
 
-import { Event, EventType } from '../models/Event';
-import { Game } from '../models/Game';
-import { UserPreferences } from '../models/UserPreferences';
+import {Event, EventType} from '../models/Event';
+import {Game} from '../models/Game';
+import {UserPreferences} from '../models/UserPreferences';
 
 /**
  * Message template interface
@@ -170,7 +170,7 @@ function personalizeTitle(title: string, game: Game, user: UserPreferences): str
 }
 
 // Export to avoid unused function warning (for future use)
-export { personalizeTitle };
+export {personalizeTitle};
 
 /**
  * Format score for display

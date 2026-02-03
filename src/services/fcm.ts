@@ -14,8 +14,8 @@
  */
 
 import * as admin from 'firebase-admin';
-import { Event, EventPriority } from '../models/Event';
-import { UserPreferences } from '../models/UserPreferences';
+import {Event, EventPriority} from '../models/Event';
+import {UserPreferences} from '../models/UserPreferences';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -114,7 +114,7 @@ export class FCMService {
   ): Promise<{ successCount: number; failureCount: number; invalidTokens: string[] }> {
     try {
       if (fcmTokens.length === 0) {
-        return { successCount: 0, failureCount: 0, invalidTokens: [] };
+        return {successCount: 0, failureCount: 0, invalidTokens: []};
       }
       
       // Split into batches of 500 (FCM limit)
@@ -206,11 +206,11 @@ export class FCMService {
     try {
       if (users.length === 0) {
         console.log(`[FCM] No users to notify for event ${event.id}`);
-        return { successCount: 0, failureCount: 0 };
+        return {successCount: 0, failureCount: 0};
       }
       
       // Extract FCM tokens
-      const fcmTokens = users.map(user => user.fcmToken);
+      const fcmTokens = users.map((user) => user.fcmToken);
       
       // Build notification payload
       const payload: NotificationPayload = {

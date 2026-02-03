@@ -15,11 +15,11 @@
  * 5. Mark events as notified in database
  */
 
-import { Event } from '../models/Event';
-import { Game } from '../models/Game';
-import { UserPreferences, shouldNotifyUser } from '../models/UserPreferences';
-import { eventRepository, userPreferencesRepository } from '../services/firestore';
-import { fcmService } from '../services/fcm';
+import {Event} from '../models/Event';
+import {Game} from '../models/Game';
+import {UserPreferences, shouldNotifyUser} from '../models/UserPreferences';
+import {eventRepository, userPreferencesRepository} from '../services/firestore';
+import {fcmService} from '../services/fcm';
 
 /**
  * Main notification engine class
@@ -72,7 +72,6 @@ export class NotificationEngine {
         
         // Mark event as notified
         await eventRepository.markEventNotified(event.id);
-        
       } catch (error) {
         console.error(`[NotificationEngine] Error processing event ${event.id}:`, error);
         // Continue processing other events
@@ -127,7 +126,7 @@ export class NotificationEngine {
         const sport = event.sport as any; // Cast to avoid type issues
         const eventType = event.type;
         
-        const filteredUsers = uniqueUsers.filter(user => 
+        const filteredUsers = uniqueUsers.filter((user) => 
           shouldNotifyUser(user, sport, eventType, event.targetAudience?.teams)
         );
         
@@ -137,7 +136,6 @@ export class NotificationEngine {
       // No targeting specified
       console.warn(`[NotificationEngine] Event ${event.id} has no target audience specified`);
       return [];
-      
     } catch (error) {
       console.error('[NotificationEngine] Error getting target users:', error);
       throw error;
@@ -192,7 +190,6 @@ export class NotificationEngine {
       const notificationsSent = await this.processEvents(events);
       
       return notificationsSent;
-      
     } catch (error) {
       console.error(`[NotificationEngine] Error processing game update:`, error);
       throw error;

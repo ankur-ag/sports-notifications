@@ -7,7 +7,7 @@
  * - Scalable: Structure allows efficient Firestore queries
  */
 
-import { EventType, Sport } from './Event';
+import {EventType, Sport} from './Event';
 
 export interface UserPreferences {
   // User identification
@@ -75,7 +75,7 @@ export function shouldNotifyUser(
   
   // Check team subscription (if teams are specified)
   if (teamIds && sportPrefs.teams) {
-    const hasTeamMatch = teamIds.some(teamId => 
+    const hasTeamMatch = teamIds.some((teamId) => 
       sportPrefs.teams?.includes(teamId)
     );
     if (!hasTeamMatch) {
@@ -101,7 +101,7 @@ export function shouldNotifyUser(
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
-    const { start, end } = preferences.quietHours;
+    const {start, end} = preferences.quietHours;
     
     // Handle overnight quiet hours (e.g., 22:00 to 08:00)
     if (start > end) {

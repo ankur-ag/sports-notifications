@@ -13,9 +13,9 @@
  */
 
 import * as admin from 'firebase-admin';
-import { Game, GameStatus } from '../models/Game';
-import { Event } from '../models/Event';
-import { UserPreferences } from '../models/UserPreferences';
+import {Game, GameStatus} from '../models/Game';
+import {Event} from '../models/Event';
+import {UserPreferences} from '../models/UserPreferences';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -50,7 +50,7 @@ export class GameRepository {
         lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
       };
       
-      await gameRef.set(gameData, { merge: true });
+      await gameRef.set(gameData, {merge: true});
       
       console.log(`[Firestore] Saved game ${game.id}`);
     } catch (error) {
@@ -103,7 +103,7 @@ export class GameRepository {
         .where('scheduledTime', '<=', admin.firestore.Timestamp.fromDate(endOfDay))
         .get();
       
-      return snapshot.docs.map(doc => {
+      return snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           ...data,
@@ -128,7 +128,7 @@ export class GameRepository {
         .where('status', '==', GameStatus.LIVE)
         .get();
       
-      return snapshot.docs.map(doc => {
+      return snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
           ...data,
@@ -160,7 +160,7 @@ export class GameRepository {
           endTime: game.endTime ? admin.firestore.Timestamp.fromDate(game.endTime) : null,
           lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
         };
-        batch.set(gameRef, gameData, { merge: true });
+        batch.set(gameRef, gameData, {merge: true});
       }
       
       await batch.commit();
@@ -191,7 +191,7 @@ export class EventRepository {
         notifiedAt: event.notifiedAt ? admin.firestore.Timestamp.fromDate(event.notifiedAt) : null
       };
       
-      await eventRef.set(eventData, { merge: true });
+      await eventRef.set(eventData, {merge: true});
       
       console.log(`[Firestore] Saved event ${event.id}`);
     } catch (error) {
@@ -257,7 +257,7 @@ export class EventRepository {
           occurredAt: event.occurredAt ? admin.firestore.Timestamp.fromDate(event.occurredAt) : null,
           notifiedAt: event.notifiedAt ? admin.firestore.Timestamp.fromDate(event.notifiedAt) : null
         };
-        batch.set(eventRef, eventData, { merge: true });
+        batch.set(eventRef, eventData, {merge: true});
       }
       
       await batch.commit();
@@ -292,7 +292,7 @@ export class UserPreferencesRepository {
         updatedAt: admin.firestore.Timestamp.fromDate(preferences.updatedAt)
       };
       
-      await prefsRef.set(prefsData, { merge: true });
+      await prefsRef.set(prefsData, {merge: true});
       
       console.log(`[Firestore] Saved preferences for user ${preferences.userId}`);
     } catch (error) {
@@ -344,7 +344,7 @@ export class UserPreferencesRepository {
       // Filter in-memory (not efficient for large datasets)
       // TODO: Optimize with dedicated team subscriptions collection
       const users = snapshot.docs
-        .map(doc => {
+        .map((doc) => {
           const data = doc.data();
           return {
             ...data,
@@ -354,9 +354,9 @@ export class UserPreferencesRepository {
             updatedAt: data.updatedAt.toDate()
           } as UserPreferences;
         })
-        .filter(prefs => {
+        .filter((prefs) => {
           // Check if user is subscribed to any sport with this team
-          return Object.values(prefs.sports).some(sportPrefs => 
+          return Object.values(prefs.sports).some((sportPrefs) => 
             sportPrefs?.teams?.includes(teamId)
           );
         });

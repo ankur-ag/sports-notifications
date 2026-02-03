@@ -23,18 +23,18 @@ export enum EventType {
   GAME_CANCELLED = 'GAME_CANCELLED',
   
   // Score-based events
-  CLOSE_GAME = 'CLOSE_GAME',           // Within X points in final period
-  BLOWOUT = 'BLOWOUT',                  // Point differential > threshold
-  COMEBACK = 'COMEBACK',                // Team overcomes large deficit
+  CLOSE_GAME = 'CLOSE_GAME', // Within X points in final period
+  BLOWOUT = 'BLOWOUT', // Point differential > threshold
+  COMEBACK = 'COMEBACK', // Team overcomes large deficit
   
   // Contextual events
-  UPSET = 'UPSET',                      // Underdog winning/won
-  RIVALRY_GAME = 'RIVALRY_GAME',        // Pre-determined rivalry matchup
-  PLAYOFF_GAME = 'PLAYOFF_GAME',        // Playoff/championship game
+  UPSET = 'UPSET', // Underdog winning/won
+  RIVALRY_GAME = 'RIVALRY_GAME', // Pre-determined rivalry matchup
+  PLAYOFF_GAME = 'PLAYOFF_GAME', // Playoff/championship game
   
   // Time-based events
   HALFTIME = 'HALFTIME',
-  FINAL_PERIOD = 'FINAL_PERIOD',        // Entering final quarter/period
+  FINAL_PERIOD = 'FINAL_PERIOD', // Entering final quarter/period
   OVERTIME = 'OVERTIME',
   
   // Custom/future events
@@ -111,8 +111,8 @@ export function shouldNotify(event: Event): boolean {
  * Event detection thresholds (configurable via environment variables)
  */
 export const EVENT_THRESHOLDS = {
-  BLOWOUT_POINT_DIFFERENTIAL: 20,      // Points ahead to be considered a blowout
-  CLOSE_GAME_POINT_DIFFERENTIAL: 5,    // Points within to be considered close
-  COMEBACK_POINT_DIFFERENTIAL: 15,     // Points to overcome for comeback
-  FINAL_PERIOD_THRESHOLD: 0.75,        // 75% through game to enter "final period" mode
+  BLOWOUT_POINT_DIFFERENTIAL: 20, // Points ahead to be considered a blowout
+  CLOSE_GAME_POINT_DIFFERENTIAL: 5, // Points within to be considered close
+  COMEBACK_POINT_DIFFERENTIAL: 15, // Points to overcome for comeback
+  FINAL_PERIOD_THRESHOLD: 0.75, // 75% through game to enter "final period" mode
 };

@@ -268,7 +268,7 @@ function detectFinalPeriod(oldGame: Game | null, newGame: Game): Event | null {
     },
     metadata: {
       period: newGame.currentPeriod,
-      score: { home: homeScore, away: awayScore }
+      score: {home: homeScore, away: awayScore}
     }
   };
 }
