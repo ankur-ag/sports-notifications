@@ -18,8 +18,7 @@ import {
   Game,
   GameStatus,
   getPointDifferential,
-  isGameLive,
-  hasGameStarted
+  isGameLive
 } from '../models/Game';
 import {
   Event,

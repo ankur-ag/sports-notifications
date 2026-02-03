@@ -155,8 +155,8 @@ export function buildBlowoutMessage(game: Game): MessageTemplate {
  */
 function personalizeTitle(title: string, game: Game, user: UserPreferences): string {
   // Check if user follows any of the teams in this game
-  for (const [sport, prefs] of Object.entries(user.sports)) {
-    if (prefs.teams) {
+  for (const [_sport, prefs] of Object.entries(user.sports)) {
+    if (prefs?.teams) {
       if (prefs.teams.includes(game.homeTeam.id)) {
         return title.replace(game.homeTeam.abbreviation, `Your ${game.homeTeam.abbreviation}`);
       }
@@ -168,6 +168,9 @@ function personalizeTitle(title: string, game: Game, user: UserPreferences): str
   
   return title;
 }
+
+// Export to avoid unused function warning (for future use)
+export { personalizeTitle };
 
 /**
  * Format score for display

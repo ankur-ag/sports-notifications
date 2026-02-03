@@ -25,9 +25,7 @@ import {
   Game,
   GameStatus,
   Sport,
-  Team,
-  GamePeriod,
-  getPointDifferential
+  GamePeriod
 } from '../models/Game';
 import { Event, EventType, EventPriority, generateEventId } from '../models/Event';
 import { BaseSportProvider } from './SportProvider';
@@ -160,10 +158,10 @@ export class NBAProvider extends BaseSportProvider {
         return [];
       }
       
-      const games = response.data.scoreboard.games.map(game => this.transformGame(game));
+      const games = response.data.scoreboard.games.map((game: NBAGame) => this.transformGame(game));
       
       console.log(`[NBAProvider] Found ${games.length} games for ${dateStr}`);
-      console.log(`[NBAProvider] Game IDs: ${games.map(g => g.id).join(', ')}`);
+      console.log(`[NBAProvider] Game IDs: ${games.map((g: Game) => g.id).join(', ')}`);
       
       return games;
     } catch (error: any) {

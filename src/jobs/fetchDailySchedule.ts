@@ -20,7 +20,6 @@
 
 import { gameRepository } from '../services/firestore';
 import { ProviderRegistry } from '../providers/SportProvider';
-import { Game } from '../models/Game';
 
 /**
  * Fetch today's schedule for all sports

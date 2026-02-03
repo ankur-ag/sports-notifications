@@ -14,7 +14,6 @@
  * 6. testNotification - HTTP trigger
  */
 
-import * as functions from 'firebase-functions/v2';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onRequest } from 'firebase-functions/v2/https';
 
@@ -301,7 +300,7 @@ export const testNotification = onRequest(
  * 
  * Returns statistics about current polling state
  * 
- * Example: https://your-function-url/getPollingStats
+ * Example: https://your-function-url/getStats
  */
 export const getStats = onRequest(
   {

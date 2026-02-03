@@ -84,8 +84,6 @@ export abstract class BaseSportProvider implements SportProvider {
    * Default event detection - can be overridden by specific providers
    */
   detectEvents(oldGame: Game | null, newGame: Game): Event[] {
-    const events: Event[] = [];
-    
     // Import here to avoid circular dependency
     const { detectCommonEvents } = require('../engine/eventDetector');
     

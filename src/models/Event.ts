@@ -7,6 +7,14 @@
  * - Extensible: Easy to add new event types without breaking existing code
  */
 
+export enum Sport {
+  NBA = 'NBA',
+  NFL = 'NFL',
+  MLB = 'MLB',
+  NHL = 'NHL',
+  SOCCER = 'SOCCER'
+}
+
 export enum EventType {
   // Game lifecycle events
   GAME_START = 'GAME_START',

@@ -160,14 +160,14 @@ export class FCMService {
           }
         };
         
-        const response = await admin.messaging().sendMulticast(message);
+        const response = await admin.messaging().sendEachForMulticast(message);
         
         totalSuccess += response.successCount;
         totalFailure += response.failureCount;
         
         // Collect invalid tokens
         if (response.failureCount > 0) {
-          response.responses.forEach((resp, idx) => {
+          response.responses.forEach((resp: any, idx: number) => {
             if (!resp.success) {
               const error = resp.error;
               if (error?.code === 'messaging/invalid-registration-token' ||

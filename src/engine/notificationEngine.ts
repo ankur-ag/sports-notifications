@@ -15,7 +15,7 @@
  * 5. Mark events as notified in database
  */
 
-import { Event, EventType } from '../models/Event';
+import { Event } from '../models/Event';
 import { Game } from '../models/Game';
 import { UserPreferences, shouldNotifyUser } from '../models/UserPreferences';
 import { eventRepository, userPreferencesRepository } from '../services/firestore';
