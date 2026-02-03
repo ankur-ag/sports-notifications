@@ -277,6 +277,7 @@ export class NBAProvider extends BaseSportProvider {
                       apiGame.gameCode?.includes('playoffs') ||
                       apiGame.seriesGameNumber?.length > 0;
     
+    // Build base game object
     const game: Game = {
       // Identifiers
       id: `nba_${apiGame.gameId}`,
@@ -295,28 +296,32 @@ export class NBAProvider extends BaseSportProvider {
       homeTeam: `${apiGame.homeTeam.teamCity} ${apiGame.homeTeam.teamName}`,
       homeAbbr: apiGame.homeTeam.teamTricode,
       homeScore: apiGame.homeTeam.score || 0,
-      homeRecord: apiGame.homeTeam.wins && apiGame.homeTeam.losses ? 
-        `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}` : 
-        undefined,
       
       // Away team (flattened)
       awayTeam: `${apiGame.awayTeam.teamCity} ${apiGame.awayTeam.teamName}`,
       awayAbbr: apiGame.awayTeam.teamTricode,
       awayScore: apiGame.awayTeam.score || 0,
-      awayRecord: apiGame.awayTeam.wins && apiGame.awayTeam.losses ? 
-        `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}` : 
-        undefined,
-      
-      // Game state
-      period: apiGame.period || undefined,
-      clock: apiGame.gameClock || undefined,
-      
-      // Metadata
-      isPlayoff,
       
       // Notification tracking
       notificationsSent: []
     };
+    
+    // Add optional fields only if they have values
+    if (apiGame.homeTeam.wins && apiGame.homeTeam.losses) {
+      game.homeRecord = `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}`;
+    }
+    if (apiGame.awayTeam.wins && apiGame.awayTeam.losses) {
+      game.awayRecord = `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}`;
+    }
+    if (apiGame.period) {
+      game.period = apiGame.period;
+    }
+    if (apiGame.gameClock) {
+      game.clock = apiGame.gameClock;
+    }
+    if (isPlayoff) {
+      game.isPlayoff = isPlayoff;
+    }
     
     return game;
   }
