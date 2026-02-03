@@ -1,13 +1,14 @@
 /**
  * Live games polling job
  * 
- * Purpose: Poll live games to detect events and send notifications
+ * Purpose: Poll active games to detect events and send notifications
  * 
- * Schedule: Runs every 5-10 minutes when games are in progress
+ * Schedule: Runs every 10 minutes
  * 
- * Cost optimization:
- * - Only polls games that are currently live
- * - Configurable polling interval (balance freshness vs. API costs)
+ * Smart polling strategy:
+ * - Only polls games that are currently LIVE
+ * - Only polls scheduled games starting within 30 minutes
+ * - Does NOT poll outside of game schedules
  * - Skips games that have ended
  * - Estimated cost: ~50-100 API calls/day for 10-15 live games
  * 
@@ -111,7 +112,8 @@ async function pollSingleGame(storedGame: Game): Promise<number> {
  * 
  * Purpose: Catch games transitioning from SCHEDULED to LIVE
  * 
- * This should run more frequently (e.g., every 2-3 minutes) during game times
+ * Only polls games within 30 minutes of scheduled start time.
+ * Runs every 10 minutes (configurable).
  */
 export async function pollScheduledGames(): Promise<void> {
   console.log('[PollLiveGames] Polling scheduled games');
@@ -150,16 +152,22 @@ export async function pollScheduledGames(): Promise<void> {
 }
 
 /**
- * Check if a game is starting soon (within 30 minutes)
+ * Check if a game is starting soon
+ * 
+ * By default, checks within 30 minutes before or after scheduled time.
+ * Configurable via POLL_GAMES_BEFORE_START_MINUTES environment variable.
  */
 function isGameStartingSoon(game: Game): boolean {
   const now = new Date();
   const scheduledTime = new Date(game.scheduledTime);
   
-  // Check if game is within 30 minutes before or after scheduled time
+  // Get polling window from environment or use default
+  const windowMinutes = parseInt(process.env.POLL_GAMES_BEFORE_START_MINUTES || '30', 10);
+  
+  // Check if game is within the window before or after scheduled time
   const diffMinutes = (scheduledTime.getTime() - now.getTime()) / (1000 * 60);
   
-  return diffMinutes >= -30 && diffMinutes <= 30;
+  return diffMinutes >= -windowMinutes && diffMinutes <= windowMinutes;
 }
 
 /**

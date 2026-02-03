@@ -85,16 +85,19 @@ export const scheduledFetchDailySchedule = onSchedule(
 );
 
 /**
- * Scheduled function: Poll live games
+ * Scheduled function: Poll active games
  * 
- * Schedule: Every 5 minutes
+ * Schedule: Every 10 minutes
  * 
- * This polls all live games to detect events and send notifications.
- * Only runs when there are games marked as LIVE in Firestore.
+ * This polls games that are either:
+ * 1. Currently LIVE (to detect events and send notifications)
+ * 2. Scheduled to start within 30 minutes (to catch game starts)
+ * 
+ * Only runs when there are active games. Does not poll outside of game schedules.
  */
 export const scheduledPollLiveGames = onSchedule(
   {
-    schedule: '*/5 * * * *', // Cron: Every 5 minutes
+    schedule: '*/10 * * * *', // Cron: Every 10 minutes
     timeZone: 'UTC',
     memory: '512MiB',
     timeoutSeconds: 120, // 2 minutes max
@@ -103,38 +106,16 @@ export const scheduledPollLiveGames = onSchedule(
     console.log('[CloudFunction] scheduledPollLiveGames triggered');
     
     try {
+      // Poll both live games and games starting soon in a single job
+      console.log('[CloudFunction] Polling live games...');
       await pollLiveGames();
+      
+      console.log('[CloudFunction] Polling scheduled games starting soon...');
+      await pollScheduledGames();
+      
       console.log('[CloudFunction] scheduledPollLiveGames completed successfully');
     } catch (error) {
       console.error('[CloudFunction] scheduledPollLiveGames failed:', error);
-      throw error;
-    }
-  }
-);
-
-/**
- * Scheduled function: Poll scheduled games
- * 
- * Schedule: Every 2 minutes (more frequent to catch game starts)
- * 
- * This polls games that are scheduled to start soon to catch the
- * transition from SCHEDULED to LIVE status.
- */
-export const scheduledPollScheduledGames = onSchedule(
-  {
-    schedule: '*/2 * * * *', // Cron: Every 2 minutes
-    timeZone: 'UTC',
-    memory: '256MiB',
-    timeoutSeconds: 120, // 2 minutes max
-  },
-  async (event) => {
-    console.log('[CloudFunction] scheduledPollScheduledGames triggered');
-    
-    try {
-      await pollScheduledGames();
-      console.log('[CloudFunction] scheduledPollScheduledGames completed successfully');
-    } catch (error) {
-      console.error('[CloudFunction] scheduledPollScheduledGames failed:', error);
       throw error;
     }
   }
