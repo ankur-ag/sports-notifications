@@ -69,7 +69,7 @@ export const scheduledFetchDailySchedule = onSchedule(
     schedule: '0 6 * * *', // Cron: Every day at 6 AM UTC
     timeZone: 'UTC',
     memory: '256MiB',
-    timeoutSeconds: 540, // 9 minutes max
+    timeoutSeconds: 540, // 9 minutes max (allows for slow NBA CDN)
   },
   async (event) => {
     console.log('[CloudFunction] scheduledFetchDailySchedule triggered');
@@ -153,7 +153,7 @@ export const scheduledPollScheduledGames = onSchedule(
 export const manualFetchSchedule = onRequest(
   {
     memory: '256MiB',
-    timeoutSeconds: 540,
+    timeoutSeconds: 300, // 5 minutes to allow for slow NBA CDN access from Cloud Functions
   },
   async (request, response) => {
     console.log('[CloudFunction] manualFetchSchedule triggered');
@@ -325,5 +325,29 @@ export const getStats = onRequest(
         error: error.message 
       });
     }
+  }
+);
+
+/**
+ * HTTP function: Health check
+ * 
+ * Simple health check endpoint to verify functions are working
+ * 
+ * Example: https://your-function-url/healthCheck
+ */
+export const healthCheck = onRequest(
+  {
+    memory: '128MiB',
+    timeoutSeconds: 10,
+  },
+  async (request, response) => {
+    console.log('[CloudFunction] healthCheck triggered');
+    
+    response.json({
+      success: true,
+      message: 'Sports Notifications Backend is healthy',
+      timestamp: new Date().toISOString(),
+      providers: ProviderRegistry.getSupportedSports()
+    });
   }
 );

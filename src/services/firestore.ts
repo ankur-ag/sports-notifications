@@ -149,6 +149,8 @@ export class GameRepository {
    */
   async saveGames(games: Game[]): Promise<void> {
     try {
+      console.log(`[Firestore] Starting batch save of ${games.length} games to collection: ${GAMES_COLLECTION}`);
+      
       const batch = db.batch();
       
       for (const game of games) {
@@ -161,13 +163,16 @@ export class GameRepository {
           lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
         };
         batch.set(gameRef, gameData, {merge: true});
+        console.log(`[Firestore] Added game ${game.id} to batch`);
       }
       
+      console.log(`[Firestore] Committing batch write...`);
       await batch.commit();
       
-      console.log(`[Firestore] Batch saved ${games.length} games`);
+      console.log(`[Firestore] ✓ Batch saved ${games.length} games successfully`);
     } catch (error) {
       console.error('[Firestore] Error batch saving games:', error);
+      console.error('[Firestore] Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
   }

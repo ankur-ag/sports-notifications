@@ -20,7 +20,6 @@
  * Note: These are unofficial but publicly accessible endpoints used by NBA.com
  */
 
-import axios, {AxiosInstance} from 'axios';
 import {
   Game,
   GameStatus,
@@ -114,7 +113,6 @@ interface NBABoxScoreResponse {
 
 export class NBAProvider extends BaseSportProvider {
   readonly sport = Sport.NBA;
-  private client: AxiosInstance;
   
   // Base URLs for NBA CDN endpoints
   private readonly SCOREBOARD_URL = 'https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json';
@@ -122,17 +120,7 @@ export class NBAProvider extends BaseSportProvider {
   
   constructor() {
     super();
-    
-    // No API key needed - these are public endpoints
-    this.client = axios.create({
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SportsNotificationBot/1.0)',
-        'Accept': 'application/json'
-      }
-    });
-    
-    console.log('[NBAProvider] Initialized with free NBA JSON endpoints');
+    console.log('[NBAProvider] Initialized with free NBA JSON endpoints (using native fetch)');
   }
   
   /**
@@ -143,34 +131,74 @@ export class NBAProvider extends BaseSportProvider {
    * For our use case (live notifications), today's games are what we need.
    */
   async fetchSchedule(date: Date): Promise<Game[]> {
-    try {
-      const dateStr = date.toISOString().split('T')[0];
-      
-      console.log(`[NBAProvider] Fetching schedule for ${dateStr}`);
-      
-      // NBA CDN endpoint returns today's scoreboard
-      // For specific dates, we'd use: https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json
-      // and filter by date, but for live notifications, today's scoreboard is sufficient
-      const response = await this.client.get<NBAScoreboardResponse>(this.SCOREBOARD_URL);
-      
-      if (!response.data?.scoreboard?.games) {
-        console.warn('[NBAProvider] No games found in scoreboard response');
-        return [];
+    const dateStr = date.toISOString().split('T')[0];
+    console.log(`[NBAProvider] Fetching schedule for ${dateStr}`);
+    
+    // Retry logic for network resilience
+    // Note: Using very long timeout (60s) due to Cloud Functions slow egress to NBA CDN
+    const maxRetries = 2;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[NBAProvider] Attempt ${attempt}/${maxRetries} to fetch NBA scoreboard`);
+        
+        // Use native fetch with AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout (Cloud Functions has slow egress to NBA CDN)
+        
+        try {
+          // NBA CDN endpoint
+          const response = await fetch(this.SCOREBOARD_URL, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; SportsNotificationBot/1.0)',
+              'Accept': 'application/json'
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data: NBAScoreboardResponse = await response.json();
+          
+          if (!data?.scoreboard?.games) {
+            console.warn('[NBAProvider] No games found in scoreboard response');
+            return [];
+          }
+          
+          const games = data.scoreboard.games.map((game: NBAGame) => this.transformGame(game));
+          
+          console.log(`[NBAProvider] Successfully fetched ${games.length} games for ${dateStr}`);
+          if (games.length > 0) {
+            console.log(`[NBAProvider] Game IDs: ${games.map((g: Game) => g.id).join(', ')}`);
+          }
+          
+          return games;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      } catch (error: any) {
+        lastError = error;
+        console.error(`[NBAProvider] Attempt ${attempt} failed:`, error.message);
+        
+        // Don't retry on final attempt
+        if (attempt < maxRetries) {
+          const delayMs = 2000 * attempt; // Exponential backoff: 2s, 4s, 6s
+          console.log(`[NBAProvider] Retrying in ${delayMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
-      
-      const games = response.data.scoreboard.games.map((game: NBAGame) => this.transformGame(game));
-      
-      console.log(`[NBAProvider] Found ${games.length} games for ${dateStr}`);
-      console.log(`[NBAProvider] Game IDs: ${games.map((g: Game) => g.id).join(', ')}`);
-      
-      return games;
-    } catch (error: any) {
-      console.error('[NBAProvider] Error fetching schedule:', error.message);
-      
-      // Return empty array on error to prevent cascade failures
-      // In production, consider retries with exponential backoff
-      return [];
     }
+    
+    // All retries failed
+    console.error(`[NBAProvider] All ${maxRetries} attempts failed. Last error:`, lastError?.message);
+    
+    // Return empty array on error to prevent cascade failures
+    return [];
   }
   
   /**
@@ -186,30 +214,51 @@ export class NBAProvider extends BaseSportProvider {
       // Format: https://cdn.nba.com/static/json/liveData/boxscore/boxscore_0022300001.json
       const boxscoreUrl = `${this.BOXSCORE_BASE_URL}${gameId}.json`;
       
-      const response = await this.client.get<NBABoxScoreResponse>(boxscoreUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
       
-      if (!response.data?.game) {
-        throw new Error(`Invalid response for game ${gameId}`);
+      try {
+        const response = await fetch(boxscoreUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SportsNotificationBot/1.0)',
+            'Accept': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data: NBABoxScoreResponse = await response.json();
+        
+        if (!data?.game) {
+          throw new Error(`Invalid response for game ${gameId}`);
+        }
+        
+        // Transform boxscore game data to NBAGame format for consistency
+        const gameData: NBAGame = {
+          gameId: data.game.gameId,
+          gameCode: '',
+          gameStatus: data.game.gameStatus,
+          gameStatusText: data.game.gameStatusText,
+          period: data.game.period,
+          gameClock: data.game.gameClock,
+          gameTimeUTC: data.game.gameTimeUTC,
+          gameEt: data.game.gameTimeLocal,
+          regulationPeriods: 4,
+          seriesGameNumber: '',
+          seriesText: '',
+          homeTeam: data.game.homeTeam,
+          awayTeam: data.game.awayTeam
+        };
+        
+        return this.transformGame(gameData);
+      } finally {
+        clearTimeout(timeoutId);
       }
-      
-      // Transform boxscore game data to NBAGame format for consistency
-      const gameData: NBAGame = {
-        gameId: response.data.game.gameId,
-        gameCode: '',
-        gameStatus: response.data.game.gameStatus,
-        gameStatusText: response.data.game.gameStatusText,
-        period: response.data.game.period,
-        gameClock: response.data.game.gameClock,
-        gameTimeUTC: response.data.game.gameTimeUTC,
-        gameEt: response.data.game.gameTimeLocal,
-        regulationPeriods: 4,
-        seriesGameNumber: '',
-        seriesText: '',
-        homeTeam: response.data.game.homeTeam,
-        awayTeam: response.data.game.awayTeam
-      };
-      
-      return this.transformGame(gameData);
     } catch (error: any) {
       console.error(`[NBAProvider] Error fetching game ${gameId}:`, error.message);
       throw error;

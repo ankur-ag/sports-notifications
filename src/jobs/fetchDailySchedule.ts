@@ -52,9 +52,16 @@ export async function fetchDailySchedule(): Promise<void> {
         console.log(`[FetchDailySchedule] Found ${games.length} ${provider.sport} games`);
         
         if (games.length > 0) {
+          console.log(`[FetchDailySchedule] Saving ${games.length} games to Firestore...`);
+          console.log(`[FetchDailySchedule] Game IDs to save: ${games.map((g) => g.id).join(', ')}`);
+          
           // Store games in Firestore
           await gameRepository.saveGames(games);
+          
+          console.log(`[FetchDailySchedule] ✓ Successfully saved ${games.length} games to Firestore`);
           totalGames += games.length;
+        } else {
+          console.log(`[FetchDailySchedule] No games to save (empty array returned from provider)`);
         }
       } catch (error) {
         console.error(`[FetchDailySchedule] Error fetching ${provider.sport} schedule:`, error);
