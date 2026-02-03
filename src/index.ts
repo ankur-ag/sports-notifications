@@ -35,8 +35,8 @@ import { fcmService } from './services/fcm';
 function initializeProviders(): void {
   console.log('[Init] Initializing sport providers');
   
-  // Register NBA provider
-  const nbaProvider = createNBAProvider(process.env.NBA_API_KEY);
+  // Register NBA provider (no API key needed - uses free NBA JSON endpoints)
+  const nbaProvider = createNBAProvider();
   ProviderRegistry.register(nbaProvider);
   
   // Add more providers here as they are implemented

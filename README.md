@@ -52,7 +52,7 @@ A sport-agnostic push notification backend built on Firebase Cloud Functions, de
 
 - Node.js 18+
 - Firebase project with Firestore and Cloud Functions enabled
-- NBA API key (optional for free tier): https://www.balldontlie.io
+- No API keys required! Uses free NBA JSON endpoints
 
 ### Installation
 
@@ -73,13 +73,14 @@ npm install
    # - Use existing project
    ```
 
-2. **Environment Variables**
+2. **Environment Variables** (optional - only for custom thresholds)
    ```bash
    firebase functions:config:set \
-     nba.api_key="your-nba-api-key" \
      event.thresholds.blowout="20" \
      event.thresholds.close_game="5"
    ```
+   
+   **Note**: No NBA API key needed! The provider uses free NBA JSON endpoints.
 
 3. **Firestore Indexes**
    
@@ -153,7 +154,7 @@ curl "https://your-region-your-project.cloudfunctions.net/getStats"
 
 ### Currently Implemented
 
-- **NBA** - Via balldontlie.io API (free tier available)
+- **NBA** - Via free NBA JSON endpoints (cdn.nba.com) - **100% FREE, no API key required**
 
 ### Coming Soon
 
@@ -182,10 +183,7 @@ curl "https://your-region-your-project.cloudfunctions.net/getStats"
 Set via Firebase Functions config:
 
 ```bash
-# NBA API
-firebase functions:config:set nba.api_key="your-key"
-
-# Event thresholds
+# Event thresholds (optional - has sensible defaults)
 firebase functions:config:set \
   event.thresholds.blowout="20" \
   event.thresholds.close_game="5" \
@@ -196,9 +194,11 @@ firebase functions:config:set \
   features.use_emoji="true"
 ```
 
+**Note**: No NBA API key needed! Uses free NBA JSON endpoints from cdn.nba.com
+
 Access in code:
 ```typescript
-const apiKey = process.env.NBA_API_KEY;
+const threshold = process.env.EVENT_THRESHOLD_BLOWOUT || 20;
 ```
 
 ### Polling Intervals

@@ -91,7 +91,7 @@ sports-notifications/
 | Notifications | Firebase Cloud Messaging | Push notifications |
 | Scheduling | Cloud Scheduler | Cron jobs |
 | HTTP Client | Axios | API requests |
-| Sport API | balldontlie.io | NBA data (free tier) |
+| Sport API | NBA JSON (cdn.nba.com) | NBA data (100% free, no key) |
 
 ## Code Quality
 

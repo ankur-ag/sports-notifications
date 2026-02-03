@@ -7,7 +7,7 @@ Get up and running in 10 minutes.
 - Node.js 18+ installed
 - Firebase CLI installed: `npm install -g firebase-tools`
 - Firebase project created (free tier is fine)
-- (Optional) NBA API key from https://www.balldontlie.io
+- No API keys required! Uses free NBA JSON endpoints
 
 ## Step 1: Firebase Project Setup
 
@@ -36,25 +36,24 @@ Select:
 npm install
 ```
 
-## Step 3: Configure Environment Variables
+## Step 3: Configure Environment Variables (Optional)
 
-### Option A: Firebase Functions Config (Recommended)
+**Good news**: No API keys required! The NBA provider uses free JSON endpoints.
+
+If you want to customize event detection thresholds:
 
 ```bash
-# Optional: Set NBA API key (free tier works without it)
-firebase functions:config:set nba.api_key="your-api-key-here"
-
-# Configure event thresholds (optional, has defaults)
+# Configure event thresholds (optional - has sensible defaults)
 firebase functions:config:set \
   event.thresholds.blowout="20" \
   event.thresholds.close_game="5"
 ```
 
-### Option B: Local .env File (Development Only)
+For local development:
 
 ```bash
 cp .env.example .env
-# Edit .env and add your values
+# No need to edit unless customizing thresholds
 ```
 
 ## Step 4: Create Firestore Indexes
