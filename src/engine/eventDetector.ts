@@ -86,16 +86,15 @@ function detectGameStart(oldGame: Game | null, newGame: Game): Event | null {
     gameId: newGame.id,
     sport: newGame.sport,
     detectedAt: new Date(),
-    occurredAt: newGame.startTime || new Date(),
+    occurredAt: new Date(),
     title: 'Game Started',
-    message: `${newGame.awayTeam.abbreviation} @ ${newGame.homeTeam.abbreviation} is now live!`,
+    message: `${newGame.awayAbbr} @ ${newGame.homeAbbr} is now live!`,
     notified: false,
     targetAudience: {
-      teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+      teams: [newGame.homeAbbr, newGame.awayAbbr]
     },
     metadata: {
-      scheduledTime: newGame.scheduledTime,
-      actualStartTime: newGame.startTime
+      scheduledTime: newGame.scheduledTime
     }
   };
 }
@@ -111,16 +110,16 @@ function detectGameEnd(oldGame: Game | null, newGame: Game): Event | null {
   if (!justEnded) return null;
   
   // Determine winner
-  const homeScore = newGame.homeTeam.score || 0;
-  const awayScore = newGame.awayTeam.score || 0;
+  const homeScore = newGame.homeScore;
+  const awayScore = newGame.awayScore;
   
   let message: string;
   if (homeScore > awayScore) {
-    message = `${newGame.homeTeam.abbreviation} defeats ${newGame.awayTeam.abbreviation} ${homeScore}-${awayScore}`;
+    message = `${newGame.homeAbbr} defeats ${newGame.awayAbbr} ${homeScore}-${awayScore}`;
   } else if (awayScore > homeScore) {
-    message = `${newGame.awayTeam.abbreviation} defeats ${newGame.homeTeam.abbreviation} ${awayScore}-${homeScore}`;
+    message = `${newGame.awayAbbr} defeats ${newGame.homeAbbr} ${awayScore}-${homeScore}`;
   } else {
-    message = `${newGame.awayTeam.abbreviation} and ${newGame.homeTeam.abbreviation} tie ${homeScore}-${awayScore}`;
+    message = `${newGame.awayAbbr} and ${newGame.homeAbbr} tie ${homeScore}-${awayScore}`;
   }
   
   return {
@@ -130,12 +129,12 @@ function detectGameEnd(oldGame: Game | null, newGame: Game): Event | null {
     gameId: newGame.id,
     sport: newGame.sport,
     detectedAt: new Date(),
-    occurredAt: newGame.endTime || new Date(),
+    occurredAt: new Date(),
     title: 'Final Score',
     message,
     notified: false,
     targetAudience: {
-      teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+      teams: [newGame.homeAbbr, newGame.awayAbbr]
     },
     metadata: {
       finalScore: {
@@ -164,10 +163,10 @@ function detectBlowout(oldGame: Game | null, newGame: Game): Event | null {
   if (wasAlreadyBlowout) return null;
   
   // Determine leading team
-  const homeScore = newGame.homeTeam.score || 0;
-  const awayScore = newGame.awayTeam.score || 0;
-  const leadingTeam = homeScore > awayScore ? newGame.homeTeam : newGame.awayTeam;
-  const trailingTeam = homeScore > awayScore ? newGame.awayTeam : newGame.homeTeam;
+  const homeScore = newGame.homeScore;
+  const awayScore = newGame.awayScore;
+  const leadingTeamAbbr = homeScore > awayScore ? newGame.homeAbbr : newGame.awayAbbr;
+  const trailingTeamAbbr = homeScore > awayScore ? newGame.awayAbbr : newGame.homeAbbr;
   
   return {
     id: generateEventId(newGame.id, EventType.BLOWOUT),
@@ -177,14 +176,14 @@ function detectBlowout(oldGame: Game | null, newGame: Game): Event | null {
     sport: newGame.sport,
     detectedAt: new Date(),
     title: 'Blowout Alert',
-    message: `${leadingTeam.abbreviation} is dominating ${trailingTeam.abbreviation} by ${differential} points`,
+    message: `${leadingTeamAbbr} is dominating ${trailingTeamAbbr} by ${differential} points`,
     notified: false,
     targetAudience: {
-      teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+      teams: [newGame.homeAbbr, newGame.awayAbbr]
     },
     metadata: {
       differential,
-      leadingTeam: leadingTeam.id
+      leadingTeam: leadingTeamAbbr
     }
   };
 }
@@ -200,12 +199,10 @@ function detectCloseGame(oldGame: Game | null, newGame: Game): Event | null {
   }
   
   // Only in final period or late in game
-  if (!newGame.currentPeriod || !newGame.totalPeriods) {
+  // For NBA: final period is 4th quarter (period 4+)
+  if (!newGame.period || newGame.period < 4) {
     return null;
   }
-  
-  const isFinalPeriod = newGame.currentPeriod >= newGame.totalPeriods;
-  if (!isFinalPeriod) return null;
   
   // Only trigger once
   const oldDifferential = oldGame ? getPointDifferential(oldGame) : null;
@@ -222,14 +219,14 @@ function detectCloseGame(oldGame: Game | null, newGame: Game): Event | null {
     sport: newGame.sport,
     detectedAt: new Date(),
     title: 'Close Game!',
-    message: `${newGame.awayTeam.abbreviation} @ ${newGame.homeTeam.abbreviation} is a nail-biter! Score within ${differential} points`,
+    message: `${newGame.awayAbbr} @ ${newGame.homeAbbr} is a nail-biter! Score within ${differential} points`,
     notified: false,
     targetAudience: {
-      teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+      teams: [newGame.homeAbbr, newGame.awayAbbr]
     },
     metadata: {
       differential,
-      period: newGame.currentPeriod
+      period: newGame.period
     }
   };
 }
@@ -238,20 +235,17 @@ function detectCloseGame(oldGame: Game | null, newGame: Game): Event | null {
  * Detect entering final period
  */
 function detectFinalPeriod(oldGame: Game | null, newGame: Game): Event | null {
-  if (!newGame.currentPeriod || !newGame.totalPeriods) {
+  if (!newGame.period) {
     return null;
   }
   
-  // Check if just entered final period
-  const isInFinalPeriod = newGame.currentPeriod === newGame.totalPeriods;
-  const wasInFinalPeriod = oldGame?.currentPeriod === oldGame?.totalPeriods;
+  // Check if just entered final period (4th quarter for NBA)
+  const isInFinalPeriod = newGame.period === 4;
+  const wasInFinalPeriod = oldGame?.period === 4;
   
   const justEnteredFinalPeriod = isInFinalPeriod && !wasInFinalPeriod;
   
   if (!justEnteredFinalPeriod) return null;
-  
-  const homeScore = newGame.homeTeam.score || 0;
-  const awayScore = newGame.awayTeam.score || 0;
   
   return {
     id: generateEventId(newGame.id, EventType.FINAL_PERIOD),
@@ -261,14 +255,14 @@ function detectFinalPeriod(oldGame: Game | null, newGame: Game): Event | null {
     sport: newGame.sport,
     detectedAt: new Date(),
     title: 'Final Period',
-    message: `${newGame.awayTeam.abbreviation} ${awayScore} @ ${newGame.homeTeam.abbreviation} ${homeScore} - Final period underway!`,
+    message: `${newGame.awayAbbr} ${newGame.awayScore} @ ${newGame.homeAbbr} ${newGame.homeScore} - 4th quarter!`,
     notified: false,
     targetAudience: {
-      teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+      teams: [newGame.homeAbbr, newGame.awayAbbr]
     },
     metadata: {
-      period: newGame.currentPeriod,
-      score: {home: homeScore, away: awayScore}
+      period: newGame.period,
+      score: {home: newGame.homeScore, away: newGame.awayScore}
     }
   };
 }
@@ -288,10 +282,10 @@ function detectStatusChange(oldGame: Game | null, newGame: Game): Event | null {
       sport: newGame.sport,
       detectedAt: new Date(),
       title: 'Game Postponed',
-      message: `${newGame.awayTeam.abbreviation} @ ${newGame.homeTeam.abbreviation} has been postponed`,
+      message: `${newGame.awayAbbr} @ ${newGame.homeAbbr} has been postponed`,
       notified: false,
       targetAudience: {
-        teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+        teams: [newGame.homeAbbr, newGame.awayAbbr]
       }
     };
   }
@@ -307,10 +301,10 @@ function detectStatusChange(oldGame: Game | null, newGame: Game): Event | null {
       sport: newGame.sport,
       detectedAt: new Date(),
       title: 'Game Cancelled',
-      message: `${newGame.awayTeam.abbreviation} @ ${newGame.homeTeam.abbreviation} has been cancelled`,
+      message: `${newGame.awayAbbr} @ ${newGame.homeAbbr} has been cancelled`,
       notified: false,
       targetAudience: {
-        teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+        teams: [newGame.homeAbbr, newGame.awayAbbr]
       }
     };
   }

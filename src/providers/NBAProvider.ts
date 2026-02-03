@@ -23,8 +23,7 @@
 import {
   Game,
   GameStatus,
-  Sport,
-  GamePeriod
+  Sport
 } from '../models/Game';
 import {Event, EventType, EventPriority, generateEventId} from '../models/Event';
 import {BaseSportProvider} from './SportProvider';
@@ -279,97 +278,49 @@ export class NBAProvider extends BaseSportProvider {
                       apiGame.seriesGameNumber?.length > 0;
     
     const game: Game = {
+      // Identifiers
       id: `nba_${apiGame.gameId}`,
       sport: Sport.NBA,
       externalId: apiGame.gameId,
       
+      // Time
       scheduledTime,
       lastUpdated: new Date(),
       
+      // Status
       status,
       statusDetail: apiGame.gameStatusText,
       
-      homeTeam: {
-        id: `nba_team_${apiGame.homeTeam.teamId}`,
-        name: `${apiGame.homeTeam.teamCity} ${apiGame.homeTeam.teamName}`,
-        abbreviation: apiGame.homeTeam.teamTricode,
-        score: apiGame.homeTeam.score,
-        record: apiGame.homeTeam.wins && apiGame.homeTeam.losses ? 
-          `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}` : 
-          undefined,
-        isHome: true
-      },
+      // Home team (flattened)
+      homeTeam: `${apiGame.homeTeam.teamCity} ${apiGame.homeTeam.teamName}`,
+      homeAbbr: apiGame.homeTeam.teamTricode,
+      homeScore: apiGame.homeTeam.score || 0,
+      homeRecord: apiGame.homeTeam.wins && apiGame.homeTeam.losses ? 
+        `${apiGame.homeTeam.wins}-${apiGame.homeTeam.losses}` : 
+        undefined,
       
-      awayTeam: {
-        id: `nba_team_${apiGame.awayTeam.teamId}`,
-        name: `${apiGame.awayTeam.teamCity} ${apiGame.awayTeam.teamName}`,
-        abbreviation: apiGame.awayTeam.teamTricode,
-        score: apiGame.awayTeam.score,
-        record: apiGame.awayTeam.wins && apiGame.awayTeam.losses ? 
-          `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}` : 
-          undefined,
-        isHome: false
-      },
+      // Away team (flattened)
+      awayTeam: `${apiGame.awayTeam.teamCity} ${apiGame.awayTeam.teamName}`,
+      awayAbbr: apiGame.awayTeam.teamTricode,
+      awayScore: apiGame.awayTeam.score || 0,
+      awayRecord: apiGame.awayTeam.wins && apiGame.awayTeam.losses ? 
+        `${apiGame.awayTeam.wins}-${apiGame.awayTeam.losses}` : 
+        undefined,
       
-      currentPeriod: apiGame.period || 0,
-      totalPeriods: apiGame.regulationPeriods || 4, // NBA has 4 quarters (+ potential overtime)
-      clock: apiGame.gameClock || '',
+      // Game state
+      period: apiGame.period || undefined,
+      clock: apiGame.gameClock || undefined,
       
-      // Parse period scores if available
-      periods: this.parsePeriods(apiGame),
+      // Metadata
+      isPlayoff,
       
-      // Note: venue is only available in boxscore endpoint
-      city: apiGame.homeTeam.teamCity,
-      
-      importance: isPlayoff ? 9 : 5, // Playoff games are more important
-      tags: isPlayoff ? ['playoff'] : [],
-      
-      sportSpecificData: {
-        gameCode: apiGame.gameCode,
-        seriesText: apiGame.seriesText,
-        seriesGameNumber: apiGame.seriesGameNumber,
-        homeTeamId: apiGame.homeTeam.teamId,
-        awayTeamId: apiGame.awayTeam.teamId,
-        homeSeed: apiGame.homeTeam.seed,
-        awaySeed: apiGame.awayTeam.seed
-      },
-      
+      // Notification tracking
       notificationsSent: []
     };
     
     return game;
   }
   
-  /**
-   * Parse period-by-period scores from NBA game data
-   */
-  private parsePeriods(apiGame: NBAGame): GamePeriod[] | undefined {
-    const periods: GamePeriod[] = [];
-    
-    // Check if period data is available
-    if (apiGame.homeTeam.periods && apiGame.awayTeam.periods) {
-      const maxPeriods = Math.max(
-        apiGame.homeTeam.periods.length,
-        apiGame.awayTeam.periods.length
-      );
-      
-      for (let i = 0; i < maxPeriods; i++) {
-        const homePeriod = apiGame.homeTeam.periods[i];
-        const awayPeriod = apiGame.awayTeam.periods[i];
-        
-        if (homePeriod && awayPeriod) {
-          periods.push({
-            number: homePeriod.period,
-            label: homePeriod.period <= 4 ? `Q${homePeriod.period}` : `OT${homePeriod.period - 4}`,
-            homeScore: homePeriod.score,
-            awayScore: awayPeriod.score
-          });
-        }
-      }
-    }
-    
-    return periods.length > 0 ? periods : undefined;
-  }
   
   /**
    * Map NBA gameStatus codes to our GameStatus enum
@@ -413,8 +364,8 @@ export class NBAProvider extends BaseSportProvider {
     
     // Add NBA-specific event detection here
     // Example: Detect overtime (period > 4)
-    if (newGame.currentPeriod && newGame.currentPeriod > 4) {
-      if (!oldGame || !oldGame.currentPeriod || oldGame.currentPeriod <= 4) {
+    if (newGame.period && newGame.period > 4) {
+      if (!oldGame || !oldGame.period || oldGame.period <= 4) {
         events.push({
           id: generateEventId(newGame.id, EventType.OVERTIME),
           type: EventType.OVERTIME,
@@ -423,10 +374,10 @@ export class NBAProvider extends BaseSportProvider {
           sport: newGame.sport,
           detectedAt: new Date(),
           title: 'Overtime!',
-          message: `${newGame.awayTeam.abbreviation} @ ${newGame.homeTeam.abbreviation} is going to OT!`,
+          message: `${newGame.awayAbbr} @ ${newGame.homeAbbr} is going to OT!`,
           notified: false,
           targetAudience: {
-            teams: [newGame.homeTeam.id, newGame.awayTeam.id]
+            teams: [newGame.homeAbbr, newGame.awayAbbr]
           }
         });
       }

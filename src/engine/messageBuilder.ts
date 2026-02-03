@@ -95,7 +95,7 @@ function shouldUseEmoji(): boolean {
 export function buildGameStartMessage(game: Game): MessageTemplate {
   return {
     title: 'Game Started! 🏀',
-    body: `${game.awayTeam.abbreviation} @ ${game.homeTeam.abbreviation} is now live!`
+    body: `${game.awayAbbr} @ ${game.homeAbbr} is now live!`
   };
 }
 
@@ -103,14 +103,14 @@ export function buildGameStartMessage(game: Game): MessageTemplate {
  * Generate a message for game end
  */
 export function buildGameEndMessage(game: Game): MessageTemplate {
-  const homeScore = game.homeTeam.score || 0;
-  const awayScore = game.awayTeam.score || 0;
+  const homeScore = game.homeScore;
+  const awayScore = game.awayScore;
   
   let body: string;
   if (homeScore > awayScore) {
-    body = `Final: ${game.homeTeam.abbreviation} ${homeScore}, ${game.awayTeam.abbreviation} ${awayScore}`;
+    body = `Final: ${game.homeAbbr} ${homeScore}, ${game.awayAbbr} ${awayScore}`;
   } else {
-    body = `Final: ${game.awayTeam.abbreviation} ${awayScore}, ${game.homeTeam.abbreviation} ${homeScore}`;
+    body = `Final: ${game.awayAbbr} ${awayScore}, ${game.homeAbbr} ${homeScore}`;
   }
   
   return {
@@ -123,11 +123,11 @@ export function buildGameEndMessage(game: Game): MessageTemplate {
  * Generate a message for close game
  */
 export function buildCloseGameMessage(game: Game): MessageTemplate {
-  const differential = Math.abs((game.homeTeam.score || 0) - (game.awayTeam.score || 0));
+  const differential = Math.abs(game.homeScore - game.awayScore);
   
   return {
     title: 'Close Game! 🔥',
-    body: `${game.awayTeam.abbreviation} @ ${game.homeTeam.abbreviation} is within ${differential} points!`
+    body: `${game.awayAbbr} @ ${game.homeAbbr} is within ${differential} points!`
   };
 }
 
@@ -135,16 +135,16 @@ export function buildCloseGameMessage(game: Game): MessageTemplate {
  * Generate a message for blowout
  */
 export function buildBlowoutMessage(game: Game): MessageTemplate {
-  const homeScore = game.homeTeam.score || 0;
-  const awayScore = game.awayTeam.score || 0;
+  const homeScore = game.homeScore;
+  const awayScore = game.awayScore;
   const differential = Math.abs(homeScore - awayScore);
   
-  const leadingTeam = homeScore > awayScore ? game.homeTeam : game.awayTeam;
-  const trailingTeam = homeScore > awayScore ? game.awayTeam : game.homeTeam;
+  const leadingTeamAbbr = homeScore > awayScore ? game.homeAbbr : game.awayAbbr;
+  const trailingTeamAbbr = homeScore > awayScore ? game.awayAbbr : game.homeAbbr;
   
   return {
     title: 'Blowout Alert 💥',
-    body: `${leadingTeam.abbreviation} is dominating ${trailingTeam.abbreviation} by ${differential} points`
+    body: `${leadingTeamAbbr} is dominating ${trailingTeamAbbr} by ${differential} points`
   };
 }
 
@@ -157,11 +157,11 @@ function personalizeTitle(title: string, game: Game, user: UserPreferences): str
   // Check if user follows any of the teams in this game
   for (const [_sport, prefs] of Object.entries(user.sports)) {
     if (prefs?.teams) {
-      if (prefs.teams.includes(game.homeTeam.id)) {
-        return title.replace(game.homeTeam.abbreviation, `Your ${game.homeTeam.abbreviation}`);
+      if (prefs.teams.includes(game.homeAbbr)) {
+        return title.replace(game.homeAbbr, `Your ${game.homeAbbr}`);
       }
-      if (prefs.teams.includes(game.awayTeam.id)) {
-        return title.replace(game.awayTeam.abbreviation, `Your ${game.awayTeam.abbreviation}`);
+      if (prefs.teams.includes(game.awayAbbr)) {
+        return title.replace(game.awayAbbr, `Your ${game.awayAbbr}`);
       }
     }
   }
@@ -176,7 +176,7 @@ export {personalizeTitle};
  * Format score for display
  */
 export function formatScore(game: Game): string {
-  return `${game.awayTeam.abbreviation} ${game.awayTeam.score || 0} @ ${game.homeTeam.abbreviation} ${game.homeTeam.score || 0}`;
+  return `${game.awayAbbr} ${game.awayScore} @ ${game.homeAbbr} ${game.homeScore}`;
 }
 
 /**
@@ -185,7 +185,7 @@ export function formatScore(game: Game): string {
 export function formatTimeRemaining(game: Game): string {
   if (!game.clock) return '';
   
-  const period = game.currentPeriod || 0;
+  const period = game.period || 0;
   const periodLabel = getPeriodLabel(game.sport, period);
   
   return `${game.clock} ${periodLabel}`;

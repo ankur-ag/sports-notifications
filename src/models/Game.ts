@@ -23,71 +23,49 @@ export enum Sport {
   SOCCER = 'SOCCER'
 }
 
-export interface Team {
-  id: string;
-  name: string;
-  abbreviation: string;
-  score?: number;
-  record?: string; // e.g., "45-20"
-  isHome: boolean;
-}
-
-export interface GamePeriod {
-  number: number;
-  label: string; // "Q1", "Q2", "Inning 1", "Period 1", "Half 1", etc.
-  homeScore?: number;
-  awayScore?: number;
-}
-
+// Simplified, flat structure for easy readability in Firestore
 export interface Game {
-  // Universal identifiers
-  id: string; // Unique game ID (provider-specific, e.g., "nba_2024_12345")
+  // Identifiers
+  id: string; // e.g., "nba_0022600800"
   sport: Sport;
-  externalId: string; // Original ID from the data provider
+  externalId: string;
   
-  // Temporal data
+  // Time
   scheduledTime: Date;
-  startTime?: Date; // Actual start time (may differ from scheduled)
-  endTime?: Date;
   lastUpdated: Date;
   
   // Status
   status: GameStatus;
-  statusDetail?: string; // e.g., "Halftime", "End of 3rd Quarter", "Rain Delay"
+  statusDetail?: string; // e.g., "Halftime", "End of 3rd"
   
-  // Teams
-  homeTeam: Team;
-  awayTeam: Team;
+  // Home team (flattened)
+  homeTeam: string; // e.g., "Los Angeles Lakers"
+  homeAbbr: string; // e.g., "LAL"
+  homeScore: number;
+  homeRecord?: string; // e.g., "30-15"
   
-  // Game progress
-  currentPeriod?: number;
-  totalPeriods?: number;
-  periods?: GamePeriod[];
-  clock?: string; // Time remaining, e.g., "5:23" or "2 outs"
+  // Away team (flattened)
+  awayTeam: string;
+  awayAbbr: string;
+  awayScore: number;
+  awayRecord?: string;
   
-  // Location
-  venue?: string;
-  city?: string;
+  // Game state
+  period?: number; // Current quarter/period
+  clock?: string; // e.g., "5:23"
   
-  // Metadata
-  importance?: number; // 1-10 scale for playoff games, rivalries, etc.
-  tags?: string[]; // e.g., ["playoff", "rivalry", "championship"]
-  
-  // Sport-specific data (use sparingly, prefer generic fields)
-  sportSpecificData?: Record<string, any>;
+  // Metadata (only what we need)
+  isPlayoff?: boolean;
   
   // Notification tracking
-  notificationsSent?: string[]; // Event IDs that have been notified
+  notificationsSent?: string[]; // Event IDs already notified
 }
 
 /**
  * Helper function to calculate point differential
  */
-export function getPointDifferential(game: Game): number | null {
-  if (game.homeTeam.score === undefined || game.awayTeam.score === undefined) {
-    return null;
-  }
-  return Math.abs(game.homeTeam.score - game.awayTeam.score);
+export function getPointDifferential(game: Game): number {
+  return Math.abs(game.homeScore - game.awayScore);
 }
 
 /**

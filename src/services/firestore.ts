@@ -45,8 +45,6 @@ export class GameRepository {
       const gameData = {
         ...game,
         scheduledTime: admin.firestore.Timestamp.fromDate(game.scheduledTime),
-        startTime: game.startTime ? admin.firestore.Timestamp.fromDate(game.startTime) : null,
-        endTime: game.endTime ? admin.firestore.Timestamp.fromDate(game.endTime) : null,
         lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
       };
       
@@ -76,8 +74,6 @@ export class GameRepository {
       return {
         ...data,
         scheduledTime: data.scheduledTime.toDate(),
-        startTime: data.startTime?.toDate(),
-        endTime: data.endTime?.toDate(),
         lastUpdated: data.lastUpdated.toDate()
       } as Game;
     } catch (error) {
@@ -108,8 +104,6 @@ export class GameRepository {
         return {
           ...data,
           scheduledTime: data.scheduledTime.toDate(),
-          startTime: data.startTime?.toDate(),
-          endTime: data.endTime?.toDate(),
           lastUpdated: data.lastUpdated.toDate()
         } as Game;
       });
@@ -133,8 +127,6 @@ export class GameRepository {
         return {
           ...data,
           scheduledTime: data.scheduledTime.toDate(),
-          startTime: data.startTime?.toDate(),
-          endTime: data.endTime?.toDate(),
           lastUpdated: data.lastUpdated.toDate()
         } as Game;
       });
@@ -158,8 +150,6 @@ export class GameRepository {
         const gameData = {
           ...game,
           scheduledTime: admin.firestore.Timestamp.fromDate(game.scheduledTime),
-          startTime: game.startTime ? admin.firestore.Timestamp.fromDate(game.startTime) : null,
-          endTime: game.endTime ? admin.firestore.Timestamp.fromDate(game.endTime) : null,
           lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
         };
         batch.set(gameRef, gameData, {merge: true});
