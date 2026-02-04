@@ -4,12 +4,13 @@
  * Collection structure:
  * /games/{gameId} - Individual game documents
  * /events/{eventId} - Individual event documents
- * /users/{userId}/preferences - User notification preferences
+ * /userPreferences/{userId} - User notification preferences
  * 
  * Design decisions:
  * - Denormalized for read performance (games and events separate)
  * - Indexed on status and scheduledTime for efficient queries
  * - Events stored separately for audit trail and analytics
+ * - userPreferences is a top-level collection (not nested)
  */
 
 import * as admin from 'firebase-admin';
@@ -27,8 +28,7 @@ const db = admin.firestore();
 // Collection references
 const GAMES_COLLECTION = 'games';
 const EVENTS_COLLECTION = 'events';
-const USERS_COLLECTION = 'users';
-const PREFERENCES_SUBCOLLECTION = 'preferences';
+const USER_PREFERENCES_COLLECTION = 'userPreferences';
 
 /**
  * Game repository
@@ -271,10 +271,7 @@ export class UserPreferencesRepository {
    */
   async savePreferences(preferences: UserPreferences): Promise<void> {
     try {
-      const prefsRef = db.collection(USERS_COLLECTION)
-        .doc(preferences.userId)
-        .collection(PREFERENCES_SUBCOLLECTION)
-        .doc('notifications');
+      const prefsRef = db.collection(USER_PREFERENCES_COLLECTION).doc(preferences.userId);
       
       const prefsData = {
         ...preferences,
@@ -298,10 +295,8 @@ export class UserPreferencesRepository {
    */
   async getPreferences(userId: string): Promise<UserPreferences | null> {
     try {
-      const prefsDoc = await db.collection(USERS_COLLECTION)
+      const prefsDoc = await db.collection(USER_PREFERENCES_COLLECTION)
         .doc(userId)
-        .collection(PREFERENCES_SUBCOLLECTION)
-        .doc('notifications')
         .get();
       
       if (!prefsDoc.exists) {
@@ -327,9 +322,8 @@ export class UserPreferencesRepository {
    */
   async getUsersByTeam(teamId: string): Promise<UserPreferences[]> {
     try {
-      // Note: This requires a composite index in Firestore
-      // For production, consider maintaining a separate collection for team subscriptions
-      const snapshot = await db.collectionGroup(PREFERENCES_SUBCOLLECTION)
+      // Query top-level userPreferences collection
+      const snapshot = await db.collection(USER_PREFERENCES_COLLECTION)
         .where('enabled', '==', true)
         .get();
       
