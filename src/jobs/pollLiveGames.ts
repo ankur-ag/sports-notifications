@@ -23,39 +23,39 @@
  * 3. Log summary
  */
 
-import {gameRepository} from '../services/firestore';
-import {notificationEngine} from '../engine/notificationEngine';
-import {ProviderRegistry} from '../providers/SportProvider';
-import {Game, GameStatus} from '../models/Game';
+import { gameRepository } from '../services/firestore';
+import { notificationEngine } from '../engine/notificationEngine';
+import { ProviderRegistry } from '../providers/SportProvider';
+import { Game, GameStatus } from '../models/Game';
 
 /**
  * Poll all live games and send notifications for detected events
  */
 export async function pollLiveGames(): Promise<void> {
   console.log('[PollLiveGames] Starting live games poll');
-  
+
   try {
     // Get all live games from Firestore
     const liveGames = await gameRepository.getLiveGames();
-    
+
     if (liveGames.length === 0) {
       console.log('[PollLiveGames] No live games to poll');
       return;
     }
-    
+
     console.log(`[PollLiveGames] Found ${liveGames.length} live games to poll`);
-    
+
     let totalNotifications = 0;
     let gamesProcessed = 0;
     let errors = 0;
-    
+
     // Process each game
     for (const storedGame of liveGames) {
       try {
         const notificationsSent = await pollSingleGame(storedGame);
         totalNotifications += notificationsSent;
         gamesProcessed++;
-        
+
         // Add small delay between API calls to respect rate limits
         await sleep(500); // 500ms between games
       } catch (error) {
@@ -64,7 +64,7 @@ export async function pollLiveGames(): Promise<void> {
         // Continue processing other games
       }
     }
-    
+
     console.log(`[PollLiveGames] Poll complete: ${gamesProcessed}/${liveGames.length} games processed, ${totalNotifications} notifications sent, ${errors} errors`);
   } catch (error) {
     console.error('[PollLiveGames] Fatal error:', error);
@@ -81,25 +81,25 @@ export async function pollLiveGames(): Promise<void> {
 async function pollSingleGame(storedGame: Game): Promise<number> {
   try {
     console.log(`[PollLiveGames] Polling game ${storedGame.id}`);
-    
+
     // Get the provider for this sport
     const provider = ProviderRegistry.getProvider(storedGame.sport);
-    
+
     // Fetch updated game data from provider
     const updatedGame = await provider.fetchGame(storedGame.externalId);
-    
+
     console.log(`[PollLiveGames] Game ${storedGame.id} status: ${updatedGame.status}`);
-    
+
     // Process the game update through notification engine
     const notificationsSent = await notificationEngine.processGameUpdate(
       storedGame,
       updatedGame,
       provider
     );
-    
+
     // Save updated game state to Firestore
     await gameRepository.saveGame(updatedGame);
-    
+
     return notificationsSent;
   } catch (error) {
     console.error(`[PollLiveGames] Error in pollSingleGame:`, error);
@@ -117,25 +117,25 @@ async function pollSingleGame(storedGame: Game): Promise<number> {
  */
 export async function pollScheduledGames(): Promise<void> {
   console.log('[PollLiveGames] Polling scheduled games');
-  
+
   try {
     // Get games scheduled for today
     const today = new Date();
     const todaysGames = await gameRepository.getGamesByDate(today);
-    
+
     // Filter for games that are scheduled and might start soon
-    const scheduledGames = todaysGames.filter((game) => 
+    const scheduledGames = todaysGames.filter((game) =>
       game.status === GameStatus.SCHEDULED &&
       isGameStartingSoon(game)
     );
-    
+
     if (scheduledGames.length === 0) {
       console.log('[PollLiveGames] No scheduled games starting soon');
       return;
     }
-    
+
     console.log(`[PollLiveGames] Found ${scheduledGames.length} games starting soon`);
-    
+
     // Poll each scheduled game
     for (const game of scheduledGames) {
       try {
@@ -160,14 +160,20 @@ export async function pollScheduledGames(): Promise<void> {
 function isGameStartingSoon(game: Game): boolean {
   const now = new Date();
   const scheduledTime = new Date(game.scheduledTime);
-  
+
   // Get polling window from environment or use default
-  const windowMinutes = parseInt(process.env.POLL_GAMES_BEFORE_START_MINUTES || '30', 10);
-  
-  // Check if game is within the window before or after scheduled time
+  // Default: Poll games starting in 30 mins OR games that should have started up to 4 hours ago
+  // This catches late starts or games we missed due to API delays
+  const preGameMinutes = parseInt(process.env.POLL_GAMES_BEFORE_START_MINUTES || '30', 10);
+  const postGameMinutes = parseInt(process.env.POLL_GAMES_AFTER_START_MINUTES || '240', 10); // 4 hours
+
+  // diffMinutes is positive if game is in future, negative if in past
   const diffMinutes = (scheduledTime.getTime() - now.getTime()) / (1000 * 60);
-  
-  return diffMinutes >= -windowMinutes && diffMinutes <= windowMinutes;
+
+  // Check if game is within the window:
+  // - Future: diffMinutes <= 30
+  // - Past: diffMinutes >= -240 (e.g. -120 is > -240)
+  return diffMinutes <= preGameMinutes && diffMinutes >= -postGameMinutes;
 }
 
 /**
@@ -175,17 +181,17 @@ function isGameStartingSoon(game: Game): boolean {
  */
 export async function pollGameById(gameId: string): Promise<void> {
   console.log(`[PollLiveGames] Manually polling game ${gameId}`);
-  
+
   try {
     const storedGame = await gameRepository.getGame(gameId);
-    
+
     if (!storedGame) {
       console.error(`[PollLiveGames] Game ${gameId} not found in database`);
       return;
     }
-    
+
     const notificationsSent = await pollSingleGame(storedGame);
-    
+
     console.log(`[PollLiveGames] Manual poll complete: ${notificationsSent} notifications sent`);
   } catch (error) {
     console.error(`[PollLiveGames] Error in manual poll:`, error);
@@ -211,7 +217,7 @@ export async function getPollingStats(): Promise<{
     const liveGames = await gameRepository.getLiveGames();
     const today = new Date();
     const todaysGames = await gameRepository.getGamesByDate(today);
-    
+
     return {
       liveGamesCount: liveGames.length,
       scheduledTodayCount: todaysGames.filter((g) => g.status === GameStatus.SCHEDULED).length

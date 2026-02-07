@@ -14,37 +14,37 @@
  * 6. testNotification - HTTP trigger
  */
 
-import {onSchedule} from 'firebase-functions/v2/scheduler';
-import {onRequest} from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onRequest } from 'firebase-functions/v2/https';
 
 // Import providers
-import {createNBAProvider} from './providers/NBAProvider';
-import {ProviderRegistry} from './providers/SportProvider';
+import { createNBAProvider } from './providers/NBAProvider';
+import { ProviderRegistry } from './providers/SportProvider';
 
 // Import jobs
-import {fetchDailySchedule, fetchScheduleForDate, validateProviders} from './jobs/fetchDailySchedule';
-import {pollLiveGames, pollScheduledGames, pollGameById, getPollingStats} from './jobs/pollLiveGames';
+import { fetchDailySchedule, fetchScheduleForDate, validateProviders } from './jobs/fetchDailySchedule';
+import { pollLiveGames, pollScheduledGames, pollGameById, getPollingStats } from './jobs/pollLiveGames';
 
 // Import services
-import {fcmService} from './services/fcm';
+import { fcmService } from './services/fcm';
 
 /**
  * Initialize providers on cold start
  */
 function initializeProviders(): void {
   console.log('[Init] Initializing sport providers');
-  
+
   // Register NBA provider (no API key needed - uses free NBA JSON endpoints)
   const nbaProvider = createNBAProvider();
   ProviderRegistry.register(nbaProvider);
-  
+
   // Add more providers here as they are implemented
   // Example:
   // const nflProvider = createNFLProvider(process.env.NFL_API_KEY);
   // ProviderRegistry.register(nflProvider);
-  
+
   console.log('[Init] Providers registered:', ProviderRegistry.getSupportedSports());
-  
+
   // Validate configuration
   const isValid = validateProviders();
   if (!isValid) {
@@ -66,14 +66,14 @@ initializeProviders();
  */
 export const scheduledFetchDailySchedule = onSchedule(
   {
-    schedule: '0 6 * * *', // Cron: Every day at 6 AM UTC
+    schedule: '0 14 * * *', // Cron: Every day at 2:00 PM UTC
     timeZone: 'UTC',
     memory: '256MiB',
     timeoutSeconds: 120, // 2 minutes max
   },
   async (event) => {
     console.log('[CloudFunction] scheduledFetchDailySchedule triggered');
-    
+
     try {
       await fetchDailySchedule();
       console.log('[CloudFunction] scheduledFetchDailySchedule completed successfully');
@@ -104,15 +104,15 @@ export const scheduledPollLiveGames = onSchedule(
   },
   async (event) => {
     console.log('[CloudFunction] scheduledPollLiveGames triggered');
-    
+
     try {
       // Poll both live games and games starting soon in a single job
       console.log('[CloudFunction] Polling live games...');
       await pollLiveGames();
-      
+
       console.log('[CloudFunction] Polling scheduled games starting soon...');
       await pollScheduledGames();
-      
+
       console.log('[CloudFunction] scheduledPollLiveGames completed successfully');
     } catch (error) {
       console.error('[CloudFunction] scheduledPollLiveGames failed:', error);
@@ -138,29 +138,29 @@ export const manualFetchSchedule = onRequest(
   },
   async (request, response) => {
     console.log('[CloudFunction] manualFetchSchedule triggered');
-    
+
     try {
       const dateParam = request.query.date as string;
-      
+
       if (dateParam) {
         const date = new Date(dateParam);
         await fetchScheduleForDate(date);
-        response.json({ 
-          success: true, 
-          message: `Fetched schedule for ${date.toISOString()}` 
+        response.json({
+          success: true,
+          message: `Fetched schedule for ${date.toISOString()}`
         });
       } else {
         await fetchDailySchedule();
-        response.json({ 
-          success: true, 
-          message: 'Fetched today\'s schedule' 
+        response.json({
+          success: true,
+          message: 'Fetched today\'s schedule'
         });
       }
     } catch (error: any) {
       console.error('[CloudFunction] manualFetchSchedule failed:', error);
-      response.status(500).json({ 
-        success: false, 
-        error: error.message 
+      response.status(500).json({
+        success: false,
+        error: error.message
       });
     }
   }
@@ -183,29 +183,31 @@ export const manualPollGame = onRequest(
   },
   async (request, response) => {
     console.log('[CloudFunction] manualPollGame triggered');
-    
+
     try {
       const gameId = request.query.gameId as string;
-      
+
       if (!gameId) {
-        response.status(400).json({ 
-          success: false, 
-          error: 'gameId parameter is required' 
+        console.log('[CloudFunction] No gameId provided, running full pollLiveGames cycle');
+        await pollLiveGames();
+        response.json({
+          success: true,
+          message: 'Triggered full live games poll successfully'
         });
         return;
       }
-      
+
       await pollGameById(gameId);
-      
-      response.json({ 
-        success: true, 
-        message: `Polled game ${gameId}` 
+
+      response.json({
+        success: true,
+        message: `Polled game ${gameId}`
       });
     } catch (error: any) {
       console.error('[CloudFunction] manualPollGame failed:', error);
-      response.status(500).json({ 
-        success: false, 
-        error: error.message 
+      response.status(500).json({
+        success: false,
+        error: error.message
       });
     }
   }
@@ -230,44 +232,44 @@ export const testNotification = onRequest(
   },
   async (request, response) => {
     console.log('[CloudFunction] testNotification triggered');
-    
+
     try {
       if (request.method !== 'POST') {
-        response.status(405).json({ 
-          success: false, 
-          error: 'Method not allowed. Use POST.' 
+        response.status(405).json({
+          success: false,
+          error: 'Method not allowed. Use POST.'
         });
         return;
       }
-      
-      const {fcmToken} = request.body;
-      
+
+      const { fcmToken } = request.body;
+
       if (!fcmToken) {
-        response.status(400).json({ 
-          success: false, 
-          error: 'fcmToken is required in request body' 
+        response.status(400).json({
+          success: false,
+          error: 'fcmToken is required in request body'
         });
         return;
       }
-      
+
       const success = await fcmService.sendTestNotification(fcmToken);
-      
+
       if (success) {
-        response.json({ 
-          success: true, 
-          message: 'Test notification sent successfully' 
+        response.json({
+          success: true,
+          message: 'Test notification sent successfully'
         });
       } else {
-        response.status(500).json({ 
-          success: false, 
-          error: 'Failed to send test notification' 
+        response.status(500).json({
+          success: false,
+          error: 'Failed to send test notification'
         });
       }
     } catch (error: any) {
       console.error('[CloudFunction] testNotification failed:', error);
-      response.status(500).json({ 
-        success: false, 
-        error: error.message 
+      response.status(500).json({
+        success: false,
+        error: error.message
       });
     }
   }
@@ -287,11 +289,11 @@ export const getStats = onRequest(
   },
   async (request, response) => {
     console.log('[CloudFunction] getStats triggered');
-    
+
     try {
       const stats = await getPollingStats();
-      
-      response.json({ 
+
+      response.json({
         success: true,
         stats: {
           ...stats,
@@ -301,9 +303,9 @@ export const getStats = onRequest(
       });
     } catch (error: any) {
       console.error('[CloudFunction] getStats failed:', error);
-      response.status(500).json({ 
-        success: false, 
-        error: error.message 
+      response.status(500).json({
+        success: false,
+        error: error.message
       });
     }
   }
@@ -323,7 +325,7 @@ export const healthCheck = onRequest(
   },
   async (request, response) => {
     console.log('[CloudFunction] healthCheck triggered');
-    
+
     response.json({
       success: true,
       message: 'Sports Notifications Backend is healthy',

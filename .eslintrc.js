@@ -29,7 +29,7 @@ module.exports = {
     "quotes": "off",
     "import/no-unresolved": 0,
     "indent": "off",
-    "max-len": ["error", {"code": 200}],
+    "max-len": ["error", { "code": 200 }],
     "require-jsdoc": "off",
     "valid-jsdoc": "off",
     "no-trailing-spaces": "off",
@@ -39,5 +39,6 @@ module.exports = {
     "@typescript-eslint/no-non-null-assertion": "warn",
     "@typescript-eslint/no-var-requires": "off",
     "no-case-declarations": "off",
+    "object-curly-spacing": "off",
   },
 };
