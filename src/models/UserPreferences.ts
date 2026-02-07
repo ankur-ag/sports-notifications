@@ -7,21 +7,21 @@
  * - Scalable: Structure allows efficient Firestore queries
  */
 
-import {EventType, Sport} from './Event';
+import { EventType, Sport } from './Event';
 
 export interface UserPreferences {
   // User identification
   userId: string;
   fcmToken: string; // Firebase Cloud Messaging token
-  
+
   // Device info (for debugging and analytics)
   platform?: 'ios' | 'android';
   appVersion?: string;
   lastActive?: Date;
-  
+
   // Notification preferences
   enabled: boolean; // Master switch for all notifications
-  
+
   // Sport subscriptions
   sports: {
     [key in Sport]?: {
@@ -32,12 +32,12 @@ export interface UserPreferences {
       eventTypes?: EventType[]; // Specific events to notify about
     };
   };
-  
+
   // Event type preferences (global, across all sports)
   eventTypePreferences?: {
     [key in EventType]?: boolean;
   };
-  
+
   // Notification schedule (quiet hours)
   quietHours?: {
     enabled: boolean;
@@ -45,11 +45,11 @@ export interface UserPreferences {
     end: string; // HH:mm format, e.g., "08:00"
     timezone?: string; // IANA timezone, e.g., "America/New_York"
   };
-  
+
   // Subscription tier (for future premium features)
   isPremium?: boolean;
   subscriptionExpiry?: Date;
-  
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -70,62 +70,57 @@ export function shouldNotifyUser(
   if (!preferences.enabled) {
     return false;
   }
-  
+
   // Check sport subscription
   const sportPrefs = preferences.sports[sport];
   if (!sportPrefs || !sportPrefs.enabled) {
     return false;
   }
-  
+
   // NEW: Check favorite team vs rival teams matchup
-  // Only send notifications for games where favorite team plays against a rival
   if (sportPrefs.favoriteTeam && sportPrefs.rivalTeams && teamIds) {
     const [homeTeam, awayTeam] = teamIds;
     const favoriteTeam = sportPrefs.favoriteTeam;
     const rivalTeams = sportPrefs.rivalTeams;
-    
-    // Check if this is a favorite vs rival matchup
-    const isFavoriteHome = homeTeam === favoriteTeam;
-    const isFavoriteAway = awayTeam === favoriteTeam;
-    const isRivalHome = rivalTeams.includes(homeTeam);
-    const isRivalAway = rivalTeams.includes(awayTeam);
-    
-    // Notify only if favorite team is playing AND opponent is a rival
-    const isRivalryGame = (isFavoriteHome && isRivalAway) || (isFavoriteAway && isRivalHome);
-    
-    if (!isRivalryGame) {
+
+    // Check if ANY of the teams playing is relevant to the user
+    const isFavoritePlaying = homeTeam === favoriteTeam || awayTeam === favoriteTeam;
+    const isRivalPlaying = rivalTeams.includes(homeTeam) || rivalTeams.includes(awayTeam);
+
+    // Notify if EITHER favorite team is playing OR any rival team is playing
+    if (!isFavoritePlaying && !isRivalPlaying) {
       return false;
     }
   } else if (teamIds && sportPrefs.teams) {
     // LEGACY: Fall back to generic team subscription (backwards compatibility)
-    const hasTeamMatch = teamIds.some((teamId) => 
+    const hasTeamMatch = teamIds.some((teamId) =>
       sportPrefs.teams?.includes(teamId)
     );
     if (!hasTeamMatch) {
       return false;
     }
   }
-  
+
   // Check event type preference
   if (sportPrefs.eventTypes && !sportPrefs.eventTypes.includes(eventType)) {
     return false;
   }
-  
+
   // Check global event type preference
   if (
-    preferences.eventTypePreferences && 
+    preferences.eventTypePreferences &&
     preferences.eventTypePreferences[eventType] === false
   ) {
     return false;
   }
-  
+
   // Check quiet hours
   if (preferences.quietHours?.enabled) {
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    
-    const {start, end} = preferences.quietHours;
-    
+
+    const { start, end } = preferences.quietHours;
+
     // Handle overnight quiet hours (e.g., 22:00 to 08:00)
     if (start > end) {
       if (currentTime >= start || currentTime <= end) {
@@ -137,7 +132,7 @@ export function shouldNotifyUser(
       }
     }
   }
-  
+
   return true;
 }
 

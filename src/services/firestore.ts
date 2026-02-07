@@ -14,9 +14,9 @@
  */
 
 import * as admin from 'firebase-admin';
-import {Game, GameStatus} from '../models/Game';
-import {Event} from '../models/Event';
-import {UserPreferences} from '../models/UserPreferences';
+import { Game, GameStatus } from '../models/Game';
+import { Event } from '../models/Event';
+import { UserPreferences } from '../models/UserPreferences';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -40,36 +40,36 @@ export class GameRepository {
   async saveGame(game: Game): Promise<void> {
     try {
       const gameRef = db.collection(GAMES_COLLECTION).doc(game.id);
-      
+
       // Convert Date objects to Firestore Timestamps
       const gameData = {
         ...game,
         scheduledTime: admin.firestore.Timestamp.fromDate(game.scheduledTime),
         lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
       };
-      
-      await gameRef.set(gameData, {merge: true});
-      
+
+      await gameRef.set(gameData, { merge: true });
+
       console.log(`[Firestore] Saved game ${game.id}`);
     } catch (error) {
       console.error(`[Firestore] Error saving game ${game.id}:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Get a specific game by ID
    */
   async getGame(gameId: string): Promise<Game | null> {
     try {
       const gameDoc = await db.collection(GAMES_COLLECTION).doc(gameId).get();
-      
+
       if (!gameDoc.exists) {
         return null;
       }
-      
+
       const data = gameDoc.data()!;
-      
+
       // Convert Firestore Timestamps back to Date objects
       return {
         ...data,
@@ -81,7 +81,7 @@ export class GameRepository {
       throw error;
     }
   }
-  
+
   /**
    * Get all games for a specific date
    */
@@ -90,15 +90,15 @@ export class GameRepository {
       // Query for games scheduled on the given date
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
-      
+
       const snapshot = await db.collection(GAMES_COLLECTION)
         .where('scheduledTime', '>=', admin.firestore.Timestamp.fromDate(startOfDay))
         .where('scheduledTime', '<=', admin.firestore.Timestamp.fromDate(endOfDay))
         .get();
-      
+
       return snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
@@ -112,7 +112,7 @@ export class GameRepository {
       throw error;
     }
   }
-  
+
   /**
    * Get all live games
    */
@@ -121,7 +121,7 @@ export class GameRepository {
       const snapshot = await db.collection(GAMES_COLLECTION)
         .where('status', '==', GameStatus.LIVE)
         .get();
-      
+
       return snapshot.docs.map((doc) => {
         const data = doc.data();
         return {
@@ -135,16 +135,16 @@ export class GameRepository {
       throw error;
     }
   }
-  
+
   /**
    * Batch save multiple games (more efficient)
    */
   async saveGames(games: Game[]): Promise<void> {
     try {
       console.log(`[Firestore] Starting batch save of ${games.length} games to collection: ${GAMES_COLLECTION}`);
-      
+
       const batch = db.batch();
-      
+
       for (const game of games) {
         const gameRef = db.collection(GAMES_COLLECTION).doc(game.id);
         const gameData = {
@@ -152,11 +152,11 @@ export class GameRepository {
           scheduledTime: admin.firestore.Timestamp.fromDate(game.scheduledTime),
           lastUpdated: admin.firestore.Timestamp.fromDate(game.lastUpdated)
         };
-        batch.set(gameRef, gameData, {merge: true});
+        batch.set(gameRef, gameData, { merge: true });
       }
-      
+
       await batch.commit();
-      
+
       console.log(`[Firestore] ✓ Batch saved ${games.length} games successfully`);
     } catch (error) {
       console.error('[Firestore] Error batch saving games:', error);
@@ -175,34 +175,34 @@ export class EventRepository {
   async saveEvent(event: Event): Promise<void> {
     try {
       const eventRef = db.collection(EVENTS_COLLECTION).doc(event.id);
-      
+
       const eventData = {
         ...event,
         detectedAt: admin.firestore.Timestamp.fromDate(event.detectedAt),
         occurredAt: event.occurredAt ? admin.firestore.Timestamp.fromDate(event.occurredAt) : null,
         notifiedAt: event.notifiedAt ? admin.firestore.Timestamp.fromDate(event.notifiedAt) : null
       };
-      
-      await eventRef.set(eventData, {merge: true});
-      
+
+      await eventRef.set(eventData, { merge: true });
+
       console.log(`[Firestore] Saved event ${event.id}`);
     } catch (error) {
       console.error(`[Firestore] Error saving event ${event.id}:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Get an event by ID
    */
   async getEvent(eventId: string): Promise<Event | null> {
     try {
       const eventDoc = await db.collection(EVENTS_COLLECTION).doc(eventId).get();
-      
+
       if (!eventDoc.exists) {
         return null;
       }
-      
+
       const data = eventDoc.data()!;
       return {
         ...data,
@@ -215,7 +215,7 @@ export class EventRepository {
       throw error;
     }
   }
-  
+
   /**
    * Mark event as notified
    */
@@ -226,21 +226,21 @@ export class EventRepository {
         notified: true,
         notifiedAt: admin.firestore.Timestamp.now()
       });
-      
+
       console.log(`[Firestore] Marked event ${eventId} as notified`);
     } catch (error) {
       console.error(`[Firestore] Error marking event as notified:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Batch save multiple events
    */
   async saveEvents(events: Event[]): Promise<void> {
     try {
       const batch = db.batch();
-      
+
       for (const event of events) {
         const eventRef = db.collection(EVENTS_COLLECTION).doc(event.id);
         const eventData = {
@@ -249,11 +249,11 @@ export class EventRepository {
           occurredAt: event.occurredAt ? admin.firestore.Timestamp.fromDate(event.occurredAt) : null,
           notifiedAt: event.notifiedAt ? admin.firestore.Timestamp.fromDate(event.notifiedAt) : null
         };
-        batch.set(eventRef, eventData, {merge: true});
+        batch.set(eventRef, eventData, { merge: true });
       }
-      
+
       await batch.commit();
-      
+
       console.log(`[Firestore] Batch saved ${events.length} events`);
     } catch (error) {
       console.error('[Firestore] Error batch saving events:', error);
@@ -272,7 +272,7 @@ export class UserPreferencesRepository {
   async savePreferences(preferences: UserPreferences): Promise<void> {
     try {
       const prefsRef = db.collection(USER_PREFERENCES_COLLECTION).doc(preferences.userId);
-      
+
       const prefsData = {
         ...preferences,
         lastActive: preferences.lastActive ? admin.firestore.Timestamp.fromDate(preferences.lastActive) : null,
@@ -280,16 +280,16 @@ export class UserPreferencesRepository {
         createdAt: admin.firestore.Timestamp.fromDate(preferences.createdAt),
         updatedAt: admin.firestore.Timestamp.fromDate(preferences.updatedAt)
       };
-      
-      await prefsRef.set(prefsData, {merge: true});
-      
+
+      await prefsRef.set(prefsData, { merge: true });
+
       console.log(`[Firestore] Saved preferences for user ${preferences.userId}`);
     } catch (error) {
       console.error(`[Firestore] Error saving preferences:`, error);
       throw error;
     }
   }
-  
+
   /**
    * Get user preferences
    */
@@ -298,11 +298,11 @@ export class UserPreferencesRepository {
       const prefsDoc = await db.collection(USER_PREFERENCES_COLLECTION)
         .doc(userId)
         .get();
-      
+
       if (!prefsDoc.exists) {
         return null;
       }
-      
+
       const data = prefsDoc.data()!;
       return {
         ...data,
@@ -316,7 +316,7 @@ export class UserPreferencesRepository {
       throw error;
     }
   }
-  
+
   /**
    * Get all users subscribed to a specific sport
    */
@@ -326,7 +326,7 @@ export class UserPreferencesRepository {
       const snapshot = await db.collection(USER_PREFERENCES_COLLECTION)
         .where('enabled', '==', true)
         .get();
-      
+
       // Filter in-memory (not efficient for large datasets)
       // TODO: Optimize with dedicated team subscriptions collection
       const users = snapshot.docs
@@ -342,11 +342,22 @@ export class UserPreferencesRepository {
         })
         .filter((prefs) => {
           // Check if user is subscribed to any sport with this team
-          return Object.values(prefs.sports).some((sportPrefs) => 
-            sportPrefs?.teams?.includes(teamId)
-          );
+          return Object.values(prefs.sports).some((sportPrefs) => {
+            if (!sportPrefs) return false;
+
+            // Check legacy teams array
+            const hasLegacyTeam = sportPrefs.teams?.includes(teamId);
+
+            // Check favorite team
+            const isFavorite = sportPrefs.favoriteTeam === teamId;
+
+            // Check rival teams
+            const isRival = sportPrefs.rivalTeams?.includes(teamId);
+
+            return hasLegacyTeam || isFavorite || isRival;
+          });
         });
-      
+
       return users;
     } catch (error) {
       console.error('[Firestore] Error getting users by team:', error);
