@@ -15,11 +15,12 @@
  * 5. Mark events as notified in database
  */
 
-import {Event} from '../models/Event';
-import {Game} from '../models/Game';
-import {UserPreferences, shouldNotifyUser} from '../models/UserPreferences';
-import {eventRepository, userPreferencesRepository} from '../services/firestore';
-import {fcmService} from '../services/fcm';
+import { Event } from '../models/Event';
+import { Game } from '../models/Game';
+import { UserPreferences, shouldNotifyUser } from '../models/UserPreferences';
+import { eventRepository, userPreferencesRepository, notificationTemplateRepository } from '../services/firestore';
+import { fcmService } from '../services/fcm';
+import { templateEngine } from '../services/templateEngine';
 
 /**
  * Main notification engine class
@@ -29,18 +30,19 @@ export class NotificationEngine {
    * Process detected events and send notifications
    * 
    * @param events - Array of detected events
+   * @param game - Optional game object to use for template rendering
    * @returns Number of notifications sent
    */
-  async processEvents(events: Event[]): Promise<number> {
+  async processEvents(events: Event[], game?: Game): Promise<number> {
     if (events.length === 0) {
       console.log('[NotificationEngine] No events to process');
       return 0;
     }
-    
+
     console.log(`[NotificationEngine] Processing ${events.length} events`);
-    
+
     let totalNotificationsSent = 0;
-    
+
     for (const event of events) {
       try {
         // Check if event was already notified
@@ -49,27 +51,60 @@ export class NotificationEngine {
           console.log(`[NotificationEngine] Event ${event.id} already notified, skipping`);
           continue;
         }
-        
+
+
+
+        // Try to apply a dynamic template
+        try {
+          const templates = await notificationTemplateRepository.getTemplates(event.type, event.sport);
+
+          if (templates.length > 0) {
+            // Pick a random template
+            // TODO: Implement logic to pick based on priority or history
+            const template = templates[Math.floor(Math.random() * templates.length)];
+
+            console.log(`[NotificationEngine] Applying template ${template.id} to event ${event.id}`);
+
+            // Render template to temporary variables
+            const newTitle = templateEngine.render(template.titleTemplate, event, game);
+            const newMessage = templateEngine.render(template.bodyTemplate, event, game);
+
+            // Validation: Ensure no unresolved placeholders remain
+            // This prevents sending messages like "Game over! {{homeTeam}} wins"
+            if (newTitle.includes('{{') || newMessage.includes('{{')) {
+              console.warn(`[NotificationEngine] Template ${template.id} resulted in unresolved placeholders. Falling back to default message.`);
+              console.warn(`[NotificationEngine] Rendered attempt: ${newTitle} | ${newMessage}`);
+            } else {
+              // Only apply if successful
+              event.title = newTitle;
+              event.message = newMessage;
+            }
+          }
+        } catch (error) {
+          console.error(`[NotificationEngine] Error applying template for event ${event.id}:`, error);
+          console.log(`[NotificationEngine] Falling back to default notification: "${event.title}"`);
+        }
+
         // Save event to database
         await eventRepository.saveEvent(event);
-        
+
         // Get target users for this event
         const targetUsers = await this.getTargetUsers(event);
-        
+
         if (targetUsers.length === 0) {
           console.log(`[NotificationEngine] No target users for event ${event.id}`);
           continue;
         }
-        
+
         console.log(`[NotificationEngine] Found ${targetUsers.length} target users for event ${event.id}`);
-        
+
         // Send notifications
         const result = await fcmService.sendEventNotification(event, targetUsers);
-        
+
         console.log(`[NotificationEngine] Sent ${result.successCount} notifications for event ${event.id}`);
-        
+
         totalNotificationsSent += result.successCount;
-        
+
         // Mark event as notified
         await eventRepository.markEventNotified(event.id);
       } catch (error) {
@@ -77,12 +112,12 @@ export class NotificationEngine {
         // Continue processing other events
       }
     }
-    
+
     console.log(`[NotificationEngine] Total notifications sent: ${totalNotificationsSent}`);
-    
+
     return totalNotificationsSent;
   }
-  
+
   /**
    * Get users who should receive notification for this event
    * 
@@ -97,7 +132,7 @@ export class NotificationEngine {
         console.warn('[NotificationEngine] All-users targeting not yet implemented');
         return [];
       }
-      
+
       // If event specifies specific users
       if (event.targetAudience?.userIds && event.targetAudience.userIds.length > 0) {
         const users: UserPreferences[] = [];
@@ -109,30 +144,30 @@ export class NotificationEngine {
         }
         return users;
       }
-      
+
       // If event specifies teams, get users subscribed to those teams
       if (event.targetAudience?.teams && event.targetAudience.teams.length > 0) {
         const allUsers: UserPreferences[] = [];
-        
+
         for (const teamId of event.targetAudience.teams) {
           const teamUsers = await userPreferencesRepository.getUsersByTeam(teamId);
           allUsers.push(...teamUsers);
         }
-        
+
         // Deduplicate users
         const uniqueUsers = this.deduplicateUsers(allUsers);
-        
+
         // Filter users based on their preferences
         const sport = event.sport as any; // Cast to avoid type issues
         const eventType = event.type;
-        
-        const filteredUsers = uniqueUsers.filter((user) => 
+
+        const filteredUsers = uniqueUsers.filter((user) =>
           shouldNotifyUser(user, sport, eventType, event.targetAudience?.teams)
         );
-        
+
         return filteredUsers;
       }
-      
+
       // No targeting specified
       console.warn(`[NotificationEngine] Event ${event.id} has no target audience specified`);
       return [];
@@ -141,24 +176,24 @@ export class NotificationEngine {
       throw error;
     }
   }
-  
+
   /**
    * Deduplicate users by userId
    */
   private deduplicateUsers(users: UserPreferences[]): UserPreferences[] {
     const seen = new Set<string>();
     const unique: UserPreferences[] = [];
-    
+
     for (const user of users) {
       if (!seen.has(user.userId)) {
         seen.add(user.userId);
         unique.push(user);
       }
     }
-    
+
     return unique;
   }
-  
+
   /**
    * Process a single game update
    * 
@@ -175,20 +210,20 @@ export class NotificationEngine {
   ): Promise<number> {
     try {
       console.log(`[NotificationEngine] Processing game update for ${newGame.id}`);
-      
+
       // Detect events
       const events = provider.detectEvents(oldGame, newGame);
-      
+
       if (events.length === 0) {
         console.log(`[NotificationEngine] No events detected for game ${newGame.id}`);
         return 0;
       }
-      
+
       console.log(`[NotificationEngine] Detected ${events.length} events for game ${newGame.id}`);
-      
+
       // Process events
-      const notificationsSent = await this.processEvents(events);
-      
+      const notificationsSent = await this.processEvents(events, newGame);
+
       return notificationsSent;
     } catch (error) {
       console.error(`[NotificationEngine] Error processing game update:`, error);

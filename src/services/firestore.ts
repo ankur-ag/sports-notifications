@@ -17,6 +17,8 @@ import * as admin from 'firebase-admin';
 import { Game, GameStatus } from '../models/Game';
 import { Event } from '../models/Event';
 import { UserPreferences } from '../models/UserPreferences';
+import { NotificationTemplate } from '../models/NotificationTemplate';
+import { EventType } from '../models/Event';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -29,6 +31,7 @@ const db = admin.firestore();
 const GAMES_COLLECTION = 'games';
 const EVENTS_COLLECTION = 'events';
 const USER_PREFERENCES_COLLECTION = 'userPreferences';
+const NOTIFICATION_TEMPLATES_COLLECTION = 'notificationTemplates';
 
 /**
  * Game repository
@@ -366,7 +369,52 @@ export class UserPreferencesRepository {
   }
 }
 
+/**
+ * Notification template repository
+ */
+export class NotificationTemplateRepository {
+  /**
+   * Get templates for a specific event type and sport
+   */
+  async getTemplates(type: EventType, sport: string): Promise<NotificationTemplate[]> {
+    try {
+      // Query for templates matching type and sport (or 'ALL')
+      const snapshot = await db.collection(NOTIFICATION_TEMPLATES_COLLECTION)
+        .where('type', '==', type)
+        .where('sport', 'in', [sport, 'ALL'])
+        .get();
+
+      if (snapshot.empty) {
+        return [];
+      }
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as NotificationTemplate));
+    } catch (error) {
+      console.error(`[Firestore] Error getting templates for ${type}/${sport}:`, error);
+      // Return empty array on error to fallback to default
+      return [];
+    }
+  }
+
+  /**
+   * Save a template
+   */
+  async saveTemplate(template: NotificationTemplate): Promise<void> {
+    try {
+      await db.collection(NOTIFICATION_TEMPLATES_COLLECTION).doc(template.id).set(template);
+      console.log(`[Firestore] Saved template ${template.id}`);
+    } catch (error) {
+      console.error(`[Firestore] Error saving template ${template.id}:`, error);
+      throw error;
+    }
+  }
+}
+
 // Export singleton instances
 export const gameRepository = new GameRepository();
 export const eventRepository = new EventRepository();
 export const userPreferencesRepository = new UserPreferencesRepository();
+export const notificationTemplateRepository = new NotificationTemplateRepository();
